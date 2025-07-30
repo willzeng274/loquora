@@ -1,0 +1,192 @@
+(* Loquora Programming Language Grammar *)
+
+(* Top level *)
+program = { statement } ;
+
+(* Statements *)
+statement = declaration_stmt | control_stmt | basic_stmt ;
+declaration_stmt = import_stmt | export_stmt | schema_decl | tool_decl | template_decl | model_decl | struct_decl ;
+control_stmt = with_stmt | loop_stmt | if_stmt | while_stmt | for_stmt ;
+basic_stmt = assignment | expr_stmt ;
+
+(* Import statements *)
+import_stmt = import_module | import_from ;
+import_module = "import" , module_path , ";" ;
+import_from = "from" , module_path , "import" , "(" , import_list , ")" , ";" ;
+
+(* Export statements *)
+export_stmt = "export" , "(" , export_items , ")" , ";" ;
+export_items = export_item , { "," , export_item } ;
+export_item = identifier | string_literal ;
+
+module_path = identifier , { "." , identifier } ;
+import_list = import_item , { "," , import_item } ;
+import_item = identifier | string_literal ;
+
+(* Schema declaration *)
+schema_decl = "schema" , identifier , "{" , { schema_field } , "}" , ";" ;
+schema_field = identifier , type_annotation , [ null_opt_suffix ] , ";" ;
+null_opt_suffix = "?" | "!" | "?!" ;
+type_annotation = ":" , type_expr ;
+
+(* TEMPLATES: SHOULD THIS LANGUAGE EVEN HAVE THIS? *)
+template_decl = "template" , identifier , "(" , [ param_list ] , ")" , "{" , template_body , "}" , ";" ;
+template_body = string_literal | multiline_string ;
+
+(* Model declaration *)
+model_decl = "model" , identifier , [ "(" , base_model , ")" ] , "{" , { model_member } , "}" , ";" ;
+base_model = identifier ;
+model_member = tool_decl | assignment ;
+
+(* Struct declaration *)
+struct_decl = "struct" , identifier , "{" , { struct_member } , "}" , ";" ;
+struct_member = schema_field | tool_decl ;
+
+(* With statement *)
+with_stmt = "with" , expression , "{" , { statement } , "}" , ";" ;
+
+(* Tool declaration *)
+tool_decl = "tool" , identifier , "(" , [ param_list ] , ")" , [ return_type ] , "{" , { statement } , "}" , ";" ;
+return_type = "->" , type_expr ;
+param_list = param , { "," , param } ;
+param = identifier , type_annotation ;
+
+(* Basic statements *)
+assignment = assignable_expr , "=" , expression , ";" ;
+assignable_expr = identifier , { "." , identifier } ;
+expr_stmt = expression , ";" ;
+return_stmt = "return" , [ expression ] , ";" ;
+break_stmt = "break" , ";" ;
+continue_stmt = "continue" , ";" ;
+
+(* Expressions *)
+(* lowest to highest: quaternary, ternary, logical-or, logical-and, logical-not, bitwise-or, bitwise-xor, bitwise-and, equality, relational, shift, additive, multiplicative, unary, postfix *)
+expression = quaternary_expr ;
+
+quaternary_expr = ternary_expr , [ "??" , expression , "::" , expression , "!!" , quaternary_expr ] ;
+
+ternary_expr = logical_or_expr , [ "?" , expression , ":" , ternary_expr ] ;
+
+logical_or_expr = logical_and_expr , { "||" , logical_and_expr } ;
+
+logical_and_expr = logical_not_expr , { "&&" , logical_not_expr } ;
+
+(* Unary operator squeezed in here for precedence *)
+logical_not_expr = [ "!" ] , bitwise_or_expr ;
+
+bitwise_or_expr = bitwise_xor_expr , { "|" , bitwise_xor_expr } ;
+
+bitwise_xor_expr = bitwise_and_expr , { "^" , bitwise_and_expr } ;
+
+bitwise_and_expr = equality_expr , { "&" , equality_expr } ;
+
+equality_expr = relational_expr , { ( "==" | "!=" ) , relational_expr } ;
+
+relational_expr = shift_expr , { ( "<" | ">" | "<=" | ">=" ) , shift_expr } ;
+
+shift_expr = additive_expr , { ( "<<" | ">>" ) , additive_expr } ;
+
+additive_expr = multiplicative_expr , { ( "+" | "-" ) , multiplicative_expr } ;
+
+multiplicative_expr = unary_expr , { ( "*" | "/" | "%" | "@" ) , unary_expr } ;
+
+unary_expr = [ unary_op ] , postfix_expr ;
+unary_op = "~" | "-" | "+" ;
+
+postfix_expr = primary_expr , { postfix_suffix } ;
+postfix_suffix = property_access | function_call_suffix ;
+property_access = "." , identifier ;
+function_call_suffix = "(" , [ arguments ] , ")" ;
+
+primary_expr = identifier | literal | paren_expr ;
+
+arguments = expression , { "," , expression } ;
+
+paren_expr = "(" , expression , ")" ;
+
+(* Literals *)
+literal = integer_literal | float_literal | string_literal | char_literal 
+        | multiline_string | interpolated_string | boolean_literal | null_literal ;
+
+multiline_string = "<<~" , heredoc_delimiter , newline , { multiline_content } , heredoc_delimiter , newline ;
+
+(* Control flow *)
+loop_stmt = "loop" , "{" , { loop_body_stmt } , "}" ;
+if_stmt = "if" , expression , "{" , { statement } , "}" ,
+          { "elif" , expression , "{" , { statement } , "}" } ,
+          [ "else" , "{" , { statement } , "}" ] ;
+while_stmt = "while" , expression , "{" , { loop_body_stmt } , "}" ;
+for_stmt = "for" , "(" , [ assignment ] , ";" , [ expression ] , ";" , [ expression ] , ")" , "{" , { loop_body_stmt } , "}" ;
+
+loop_body_stmt = statement | break_stmt | continue_stmt ;
+
+(* Types *)
+type_expr = identifier , [ "<" , type_list , ">" ] ;
+type_list = type_expr , { "," , type_expr } ;
+
+(* String expressions *)
+interpolated_string = '"' , { interpolated_string_char | interpolation } , '"' ;
+interpolation = "{" , expression , "}" ;
+
+(* Lexical elements *)
+keywords = "import" | "from" | "export" | "schema" | "template" | "model" | "struct" | "tool" 
+        | "if" | "else" | "elif" | "while" | "for" | "loop" | "with" | "as" 
+        | "true" | "false" | "null" ;
+identifier = ( letter | "_" ) , { letter | digit | "_" } - (keywords) ;
+heredoc_delimiter = identifier ;
+integer_literal = "0" | nonzero_digit , { digit } ;
+float_literal = ( "0" | nonzero_digit , { digit } ) , "." , { digit } , [ exponent ] 
+               | "." , digit , { digit } , [ exponent ] ;
+exponent = ( "e" | "E" ) , [ "+" | "-" ] , digit , { digit } ;
+string_literal = '"' , { string_char } , '"' ;
+char_literal = "'" , char , "'" ;
+boolean_literal = "true" | "false" ;
+null_literal = "null" ;
+
+string_char = string_escape_sequence | any_char_except_quote ;
+string_escape_sequence = "\\" , string_escape_char ;
+string_escape_char = "n" | "t" | "r" | "\\" | '"' ;
+
+interpolated_string_char = string_escape_sequence | any_char_except_quote_and_brace ;
+
+char = char_escape_sequence | any_char_except_single_quote ;
+char_escape_sequence = "\\" , char_escape_char ;
+char_escape_char = "n" | "t" | "r" | "\\" | "'" ;
+
+(* Terminal symbols *)
+letter = ? letter ? ;
+digit = ? digit ? ;
+nonzero_digit = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+newline = ? newline character ? ;
+multiline_content = ? any character except heredoc delimiter at start of line ? ;
+any_char_except_quote = ? any character except double quote ? ;
+any_char_except_quote_and_brace = ? any character except double quote and opening brace ? ;
+any_char_except_single_quote = ? any character except single quote ? ;
+
+(* comments handled at lexical level, not in grammar. Lexer discards // and /**/ *)
+
+(* Still a bit unclear, need to implement lexer first *)
+(* 'break' and 'continue' are only keywords inside loop contexts, otherwise identifiers *)
+(* 'return' is only a keyword inside tool contexts, otherwise an identifier *)
+
+(* FUNCTIONAL DESIGN CHOICES *)
+(* NO ARRAY LITERALS: use list(1, 2, 3) or cons(1, cons(2, nil)) *)
+(* NO OBJECT LITERALS: use object(pair("key", value), pair("foo", bar)) *)
+(* NO INDEXING: use get(arr, 0) or lookup(obj, "key") - keeps access functional *)
+(* NO VARIABLE KEYWORDS: assignment creates bindings, immutability via semantics *)
+(* @ OPERATOR: an operator that returns the lvalue (rvalue is ignored) *)
+(* SCHEMA SUFFIXES: ? (nullable), ! (optional), ?! (nullable and optional)*)
+(* QUATERNARY OPERATOR (??::!!): condition ?? value_if_true :: value_if_false !! value_if_null *)
+(*   Example: user ?? user.name :: "Anonymous" !! panic("No user!") *)
+
+(* DELIBERATELY EXCLUDED FEATURES *)
+(* NO PATTERN MATCHING: use conditional expressions *)
+(* NO LAMBDA/ANONYMOUS FUNCTIONS: use named tool declarations *)
+(* NO BLOCK EXPRESSIONS: use explicit function calls for complex logic *)
+(* NO TRY/CATCH: no error handling since functions return success/failure values *)
+(* NO ASSIGNMENT OPERATORS (+=, -=): use explicit assignment for clarity *)
+(* NO INCREMENT/DECREMENT (++, --): use explicit arithmetic for clarity *)
+(* NO SWITCH STATEMENTS: use if-elif-else chains for clarity *)
+(* NO CONSTANT DECLARATIONS: use assignment, immutability handled semantically *)
+(* NO HEXADECIMAL/BINARY/OCTAL NUMBERS: decimal only for simplicity *)
+(* NO TUPLES: use function calls like tuple(a, b, c) *)
