@@ -1,0 +1,13 @@
+name = "Loquora";
+msg = "Hello, {name}!";
+ch = 'x';
+
+template t1(param: String) {
+  <<~DOC
+This is a heredoc example for {param}
+DOC
+};
+
+hello = <<~TEST
+me when the impostor is sus
+TEST;

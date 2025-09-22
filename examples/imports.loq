@@ -1,0 +1,3 @@
+from core.utils import ( format, "stringify" );
+import my.module.path;
+export("foo", bar);

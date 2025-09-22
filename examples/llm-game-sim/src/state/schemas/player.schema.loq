@@ -1,0 +1,7 @@
+schema Player:
+    name: str
+    health: int
+    stamina: int
+    inventory: vec[InventoryItem]
+    position: map[str, int]  // {x, y, z}
+    status_effects: vec[str]?

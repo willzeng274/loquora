@@ -1,0 +1,3 @@
+x = 1 + 2 * 3 - 4 / 2;
+y = (x << 1) & 15 | 2 ^ 3;
+result = user ?? user.name :: "Anonymous" !! panic("No user!");

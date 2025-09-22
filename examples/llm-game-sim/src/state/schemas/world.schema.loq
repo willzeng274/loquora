@@ -1,0 +1,5 @@
+schema World:
+    time: int
+    weather: str
+    environment: str
+    active_events: vec[Event]

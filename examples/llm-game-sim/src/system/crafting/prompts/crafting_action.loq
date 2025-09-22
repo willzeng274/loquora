@@ -1,0 +1,8 @@
+<<~PROMPT
+Given player's inventory:
+#{player.inventory}
+
+Craft item: #{requested_item}
+
+Return new inventory and crafted item details.
+PROMPT

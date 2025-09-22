@@ -1,0 +1,47 @@
+from state.schemas import Player, World
+
+// maybe unclean?
+import systems.dialogue.prompts.npc_dialogue
+import systems.combat.prompts.combat_action
+import systems.crafting.prompts.crafting_action
+
+import narration.prompts.world_tick
+
+from tools import (
+    state_manager,
+    combat_tools,
+    crafting_tools
+)
+
+use "gpt-4o"
+
+// Initialize Player + World
+player = Player(name="Eira", health=100, stamina=50, inventory=vec[], position=map["x":0,"y":0,"z":0])
+world = World(time=0, weather="clear", environment="forest", active_events=vec[])
+
+// Game loop
+while 1:
+    // Step 1: World progression
+    world = ask <<~PROMPT
+    Current world state:
+    #{world}
+    Advance simulation by one tick.
+    PROMPT as World
+
+    // Step 2: Random event triggers combat or dialogue
+    if world.active_events:
+        event = world.active_events[0]
+
+        if event.type == "combat":
+            combat_outcome = ask combat_action(player, event) as CombatResult
+            player = update_player_after_combat(player, combat_outcome)
+
+        elif event.type == "dialogue":
+            dialogue = ask npc_dialogue(player, event)
+            handle_dialogue(dialogue)
+
+        elif event.type == "craft":
+            crafted_item = ask crafting_action(player, "Healing Potion")
+            add_to_inventory(player, crafted_item)
+
+    save_state(map["player": player, "world": world])

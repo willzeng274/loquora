@@ -1,0 +1,13 @@
+schema User {
+  id: Int!;
+  name: String?;
+  email: String?!;
+};
+
+struct Account {
+  user: User!;
+};
+
+model PremiumUser(User) {
+  status = "gold";
+};
