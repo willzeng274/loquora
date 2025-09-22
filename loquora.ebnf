@@ -108,7 +108,7 @@ paren_expr = "(" , expression , ")" ;
 literal = integer_literal | float_literal | string_literal | char_literal 
         | multiline_string | interpolated_string | boolean_literal | null_literal ;
 
-multiline_string = "<<~" , heredoc_delimiter , newline , { multiline_content } , heredoc_delimiter , newline ;
+multiline_string = "<<~" , heredoc_delimiter , newline , { multiline_content } , heredoc_delimiter , [ newline ] ;
 
 (* Control flow *)
 loop_stmt = "loop" , "{" , { loop_body_stmt } , "}" ;
