@@ -38,45 +38,45 @@ pub enum TokenKind {
     Continue,
 
     // Operators
-    Plus,        // +
-    Minus,       // -
-    Multiply,    // *
-    Divide,      // /
-    Modulo,      // %
-    At,          // @
-    BitAnd,      // &
-    BitOr,       // |
-    BitXor,      // ^
-    BitNot,      // ~
-    LogicalNot,  // !
-    LogicalAnd,  // &&
-    LogicalOr,   // ||
-    EqualEqual,  // ==
-    NotEqual,    // !=
-    Less,        // <
-    Greater,     // >
-    LessEqual,   // <=
-    GreaterEqual,// >=
-    ShiftLeft,   // <<
-    ShiftRight,  // >>
-    Assign,      // =
-    Arrow,       // ->
+    Plus,         // +
+    Minus,        // -
+    Multiply,     // *
+    Divide,       // /
+    Modulo,       // %
+    At,           // @
+    BitAnd,       // &
+    BitOr,        // |
+    BitXor,       // ^
+    BitNot,       // ~
+    LogicalNot,   // !
+    LogicalAnd,   // &&
+    LogicalOr,    // ||
+    EqualEqual,   // ==
+    NotEqual,     // !=
+    Less,         // <
+    Greater,      // >
+    LessEqual,    // <=
+    GreaterEqual, // >=
+    ShiftLeft,    // <<
+    ShiftRight,   // >>
+    Assign,       // =
+    Arrow,        // ->
 
     // Quaternary and ternary parts
-    Question,    // ?
-    Colon,       // :
-    QQuestion,   // ??
-    DColon,      // ::
-    BangBang,    // !!
+    Question,  // ?
+    Colon,     // :
+    QQuestion, // ??
+    DColon,    // ::
+    BangBang,  // !!
 
     // Punctuation
-    Dot,         // .
-    Comma,       // ,
-    Semicolon,   // ;
-    LeftParen,   // (
-    RightParen,  // )
-    LeftBrace,   // {
-    RightBrace,  // }
+    Dot,        // .
+    Comma,      // ,
+    Semicolon,  // ;
+    LeftParen,  // (
+    RightParen, // )
+    LeftBrace,  // {
+    RightBrace, // }
 
     MultilineString, // <<~...delimiter
 
@@ -95,5 +95,3 @@ impl Token {
         Token { kind, span }
     }
 }
-
-

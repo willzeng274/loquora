@@ -1,17 +1,17 @@
 mod ast;
-mod token;
-mod lexer;
-mod parser;
 mod interpreter;
+mod lexer;
 mod loquora;
+mod parser;
+mod token;
 
-use std::io;
-use std::io::Write;
 use std::env;
 use std::fs;
+use std::io;
+use std::io::Write;
 
-use loquora::parser as lqparser;
 use loquora::lexer as lqlexer;
+use loquora::parser as lqparser;
 use loquora::token::TokenKind;
 
 fn main() {
@@ -33,10 +33,14 @@ fn main() {
         let _ = io::stdout().flush();
 
         let mut line = String::new();
-        if io::stdin().read_line(&mut line).is_err() { break; }
+        if io::stdin().read_line(&mut line).is_err() {
+            break;
+        }
 
         let trimmed = line.trim();
-        if buffer.is_empty() && (trimmed == ":q" || trimmed == ":quit" || trimmed == "quit" || trimmed == "exit") {
+        if buffer.is_empty()
+            && (trimmed == ":q" || trimmed == ":quit" || trimmed == "quit" || trimmed == "exit")
+        {
             break;
         }
 
@@ -52,9 +56,8 @@ fn main() {
         let lx = lqlexer::Lexer::new(source);
         let mut parser = lqparser::Parser::new(lx);
 
-        let parsed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            parser.parse_program()
-        }));
+        let parsed =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| parser.parse_program()));
 
         match parsed {
             Ok(program) => {
@@ -69,9 +72,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use crate::interpreter::Interpreter;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
-    use crate::interpreter::Interpreter;
 
     fn make_interpreter(text: &str) -> Interpreter {
         let lexer = Lexer::new(String::from(text));
@@ -141,7 +144,9 @@ mod tests {
 
 fn is_repl_input_complete(src: &str) -> bool {
     // Empty input is never complete
-    if src.trim().is_empty() { return false; }
+    if src.trim().is_empty() {
+        return false;
+    }
 
     let mut paren_depth: isize = 0;
     let mut brace_depth: isize = 0;
@@ -155,17 +160,23 @@ fn is_repl_input_complete(src: &str) -> bool {
             TokenKind::RightParen => paren_depth -= 1,
             TokenKind::LeftBrace => brace_depth += 1,
             TokenKind::RightBrace => brace_depth -= 1,
-            TokenKind::EOF => { break; }
+            TokenKind::EOF => {
+                break;
+            }
             _ => {}
         }
 
         match tok.kind {
             TokenKind::EOF => {}
-            _ => { last_sig = Some(tok.kind.clone()); }
+            _ => {
+                last_sig = Some(tok.kind.clone());
+            }
         }
     }
 
-    if paren_depth > 0 || brace_depth > 0 { return false; }
+    if paren_depth > 0 || brace_depth > 0 {
+        return false;
+    }
 
     match last_sig {
         Some(TokenKind::Semicolon) | Some(TokenKind::RightBrace) => true,

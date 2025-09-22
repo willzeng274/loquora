@@ -12,7 +12,7 @@ impl Parser {
     pub fn new(mut lexer: Lexer) -> Parser {
         let input = lexer.text.clone();
         let current_token = Some(lexer.get_next_token());
-        
+
         Parser {
             lexer,
             current_token,

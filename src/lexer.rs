@@ -52,7 +52,11 @@ impl Lexer {
         }
 
         let span = start..self.pos;
-        let kind = if has_dot { TokenKind::Float } else { TokenKind::Int };
+        let kind = if has_dot {
+            TokenKind::Float
+        } else {
+            TokenKind::Int
+        };
         Token::new(kind, span)
     }
 

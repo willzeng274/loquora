@@ -17,7 +17,11 @@ impl<T> Spanned<T> {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExprKind {
     Int(i64),
-    BinaryOp { op: TokenKind, left: Box<Expr>, right: Box<Expr> },
+    BinaryOp {
+        op: TokenKind,
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
 }
 
 pub type Expr = Spanned<ExprKind>;

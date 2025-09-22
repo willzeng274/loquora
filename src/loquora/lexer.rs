@@ -10,7 +10,11 @@ pub struct Lexer {
 impl Lexer {
     pub fn new(input: String) -> Self {
         let chars: Vec<char> = input.chars().collect();
-        Lexer { input, chars, index: 0 }
+        Lexer {
+            input,
+            chars,
+            index: 0,
+        }
     }
 
     pub fn source(&self) -> &str {
@@ -57,7 +61,9 @@ impl Lexer {
 
     fn skip_line_comment(&mut self) {
         while let Some(ch) = self.peek() {
-            if ch == '\n' { break; }
+            if ch == '\n' {
+                break;
+            }
             self.advance();
         }
     }
@@ -94,7 +100,11 @@ impl Lexer {
             }
         }
         let end = self.index;
-        if saw_dot { self.make_token(TokenKind::Float, start, end) } else { self.make_token(TokenKind::Int, start, end) }
+        if saw_dot {
+            self.make_token(TokenKind::Float, start, end)
+        } else {
+            self.make_token(TokenKind::Int, start, end)
+        }
     }
 
     fn lex_identifier_or_keyword(&mut self, start: usize) -> Token {
@@ -135,12 +145,19 @@ impl Lexer {
         // assumes the opening quote was already consumed by caller
         while let Some(ch) = self.peek() {
             match ch {
-                '"' => { self.advance(); break; }
+                '"' => {
+                    self.advance();
+                    break;
+                }
                 '\\' => {
                     self.advance();
-                    if self.peek().is_some() { self.advance(); }
+                    if self.peek().is_some() {
+                        self.advance();
+                    }
                 }
-                _ => { self.advance(); }
+                _ => {
+                    self.advance();
+                }
             }
         }
         self.make_token(TokenKind::String, start, self.index)
@@ -149,9 +166,13 @@ impl Lexer {
     fn lex_char(&mut self, start: usize) -> Token {
         if self.peek() == Some('\\') {
             self.advance();
-            if self.peek().is_some() { self.advance(); }
+            if self.peek().is_some() {
+                self.advance();
+            }
         } else {
-            if self.peek().is_some() { self.advance(); }
+            if self.peek().is_some() {
+                self.advance();
+            }
         }
         if self.peek() == Some('\'') {
             self.advance();
@@ -163,19 +184,29 @@ impl Lexer {
         // After <<~, read delimiter (identifier), then read until a line that exactly matches it
         let delim_start = self.index;
         while let Some(c) = self.peek() {
-            if Self::is_ident_continue(c) { self.advance(); } else { break; }
+            if Self::is_ident_continue(c) {
+                self.advance();
+            } else {
+                break;
+            }
         }
         let delim_end = self.index;
         let delimiter = self.input[delim_start..delim_end].to_string();
         let delim_len = delimiter.len();
-        if self.peek() == Some('\n') { self.advance(); }
+        if self.peek() == Some('\n') {
+            self.advance();
+        }
         let body_start = self.index;
         let mut end_of_token = body_start;
         let total_len = self.chars.len();
         while self.index <= total_len {
-            if self.index >= total_len { break; }
+            if self.index >= total_len {
+                break;
+            }
             let line_start = self.index;
-            while self.index < total_len && self.chars[self.index] != '\n' { self.index += 1; }
+            while self.index < total_len && self.chars[self.index] != '\n' {
+                self.index += 1;
+            }
             let line_end = self.index;
             let slice = &self.input[line_start..line_end];
             let is_delim_exact = (line_end - line_start) == delim_len && slice == delimiter;
@@ -188,11 +219,15 @@ impl Lexer {
                     let semicolon_pos = line_start + delim_len;
                     self.index = semicolon_pos;
                 } else {
-                    if self.index < total_len && self.chars[self.index] == '\n' { self.index += 1; }
+                    if self.index < total_len && self.chars[self.index] == '\n' {
+                        self.index += 1;
+                    }
                 }
                 break;
             } else {
-                if self.index < total_len && self.chars[self.index] == '\n' { self.index += 1; }
+                if self.index < total_len && self.chars[self.index] == '\n' {
+                    self.index += 1;
+                }
                 end_of_token = self.index;
             }
         }
@@ -203,27 +238,38 @@ impl Lexer {
         loop {
             self.skip_whitespace();
             let start = self.index;
-            let ch = match self.peek() { Some(c) => c, None => return self.make_token(TokenKind::EOF, start, start) };
+            let ch = match self.peek() {
+                Some(c) => c,
+                None => return self.make_token(TokenKind::EOF, start, start),
+            };
 
             if ch == '/' {
                 if self.peek_n(1) == Some('/') {
-                    self.advance(); self.advance();
+                    self.advance();
+                    self.advance();
                     self.skip_line_comment();
                     continue;
                 } else if self.peek_n(1) == Some('*') {
-                    self.advance(); self.advance();
+                    self.advance();
+                    self.advance();
                     self.skip_block_comment();
                     continue;
                 }
             }
 
             if ch == '<' && self.peek_n(1) == Some('<') && self.peek_n(2) == Some('~') {
-                self.advance(); self.advance(); self.advance();
+                self.advance();
+                self.advance();
+                self.advance();
                 return self.lex_heredoc(start);
             }
 
-            if ch.is_ascii_digit() || (ch == '.' && self.peek_n(1).map(|c| c.is_ascii_digit()).unwrap_or(false)) {
-                if ch == '.' { self.advance(); }
+            if ch.is_ascii_digit()
+                || (ch == '.' && self.peek_n(1).map(|c| c.is_ascii_digit()).unwrap_or(false))
+            {
+                if ch == '.' {
+                    self.advance();
+                }
                 return self.lex_number(start);
             }
 
@@ -243,45 +289,162 @@ impl Lexer {
             }
 
             match (ch, self.peek_n(1)) {
-                ('&', Some('&')) => { self.advance(); self.advance(); return self.make_token(TokenKind::LogicalAnd, start, self.index); }
-                ('|', Some('|')) => { self.advance(); self.advance(); return self.make_token(TokenKind::LogicalOr, start, self.index); }
-                ('=', Some('=')) => { self.advance(); self.advance(); return self.make_token(TokenKind::EqualEqual, start, self.index); }
-                ('!', Some('=')) => { self.advance(); self.advance(); return self.make_token(TokenKind::NotEqual, start, self.index); }
-                ('<', Some('=')) => { self.advance(); self.advance(); return self.make_token(TokenKind::LessEqual, start, self.index); }
-                ('>', Some('=')) => { self.advance(); self.advance(); return self.make_token(TokenKind::GreaterEqual, start, self.index); }
-                ('<', Some('<')) => { self.advance(); self.advance(); return self.make_token(TokenKind::ShiftLeft, start, self.index); }
-                ('>', Some('>')) => { self.advance(); self.advance(); return self.make_token(TokenKind::ShiftRight, start, self.index); }
-                ('?', Some('?')) => { self.advance(); self.advance(); return self.make_token(TokenKind::QQuestion, start, self.index); }
-                (':', Some(':')) => { self.advance(); self.advance(); return self.make_token(TokenKind::DColon, start, self.index); }
-                ('!', Some('!')) => { self.advance(); self.advance(); return self.make_token(TokenKind::BangBang, start, self.index); }
-                ('-', Some('>')) => { self.advance(); self.advance(); return self.make_token(TokenKind::Arrow, start, self.index); }
+                ('&', Some('&')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::LogicalAnd, start, self.index);
+                }
+                ('|', Some('|')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::LogicalOr, start, self.index);
+                }
+                ('=', Some('=')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::EqualEqual, start, self.index);
+                }
+                ('!', Some('=')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::NotEqual, start, self.index);
+                }
+                ('<', Some('=')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::LessEqual, start, self.index);
+                }
+                ('>', Some('=')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::GreaterEqual, start, self.index);
+                }
+                ('<', Some('<')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::ShiftLeft, start, self.index);
+                }
+                ('>', Some('>')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::ShiftRight, start, self.index);
+                }
+                ('?', Some('?')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::QQuestion, start, self.index);
+                }
+                (':', Some(':')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::DColon, start, self.index);
+                }
+                ('!', Some('!')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::BangBang, start, self.index);
+                }
+                ('-', Some('>')) => {
+                    self.advance();
+                    self.advance();
+                    return self.make_token(TokenKind::Arrow, start, self.index);
+                }
                 _ => {}
             }
 
             match ch {
-                '+' => { self.advance(); return self.make_token(TokenKind::Plus, start, self.index); }
-                '-' => { self.advance(); return self.make_token(TokenKind::Minus, start, self.index); }
-                '*' => { self.advance(); return self.make_token(TokenKind::Multiply, start, self.index); }
-                '/' => { self.advance(); return self.make_token(TokenKind::Divide, start, self.index); }
-                '%' => { self.advance(); return self.make_token(TokenKind::Modulo, start, self.index); }
-                '@' => { self.advance(); return self.make_token(TokenKind::At, start, self.index); }
-                '&' => { self.advance(); return self.make_token(TokenKind::BitAnd, start, self.index); }
-                '|' => { self.advance(); return self.make_token(TokenKind::BitOr, start, self.index); }
-                '^' => { self.advance(); return self.make_token(TokenKind::BitXor, start, self.index); }
-                '~' => { self.advance(); return self.make_token(TokenKind::BitNot, start, self.index); }
-                '!' => { self.advance(); return self.make_token(TokenKind::LogicalNot, start, self.index); }
-                '=' => { self.advance(); return self.make_token(TokenKind::Assign, start, self.index); }
-                '<' => { self.advance(); return self.make_token(TokenKind::Less, start, self.index); }
-                '>' => { self.advance(); return self.make_token(TokenKind::Greater, start, self.index); }
-                '?' => { self.advance(); return self.make_token(TokenKind::Question, start, self.index); }
-                ':' => { self.advance(); return self.make_token(TokenKind::Colon, start, self.index); }
-                '.' => { self.advance(); return self.make_token(TokenKind::Dot, start, self.index); }
-                ',' => { self.advance(); return self.make_token(TokenKind::Comma, start, self.index); }
-                ';' => { self.advance(); return self.make_token(TokenKind::Semicolon, start, self.index); }
-                '(' => { self.advance(); return self.make_token(TokenKind::LeftParen, start, self.index); }
-                ')' => { self.advance(); return self.make_token(TokenKind::RightParen, start, self.index); }
-                '{' => { self.advance(); return self.make_token(TokenKind::LeftBrace, start, self.index); }
-                '}' => { self.advance(); return self.make_token(TokenKind::RightBrace, start, self.index); }
+                '+' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Plus, start, self.index);
+                }
+                '-' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Minus, start, self.index);
+                }
+                '*' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Multiply, start, self.index);
+                }
+                '/' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Divide, start, self.index);
+                }
+                '%' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Modulo, start, self.index);
+                }
+                '@' => {
+                    self.advance();
+                    return self.make_token(TokenKind::At, start, self.index);
+                }
+                '&' => {
+                    self.advance();
+                    return self.make_token(TokenKind::BitAnd, start, self.index);
+                }
+                '|' => {
+                    self.advance();
+                    return self.make_token(TokenKind::BitOr, start, self.index);
+                }
+                '^' => {
+                    self.advance();
+                    return self.make_token(TokenKind::BitXor, start, self.index);
+                }
+                '~' => {
+                    self.advance();
+                    return self.make_token(TokenKind::BitNot, start, self.index);
+                }
+                '!' => {
+                    self.advance();
+                    return self.make_token(TokenKind::LogicalNot, start, self.index);
+                }
+                '=' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Assign, start, self.index);
+                }
+                '<' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Less, start, self.index);
+                }
+                '>' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Greater, start, self.index);
+                }
+                '?' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Question, start, self.index);
+                }
+                ':' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Colon, start, self.index);
+                }
+                '.' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Dot, start, self.index);
+                }
+                ',' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Comma, start, self.index);
+                }
+                ';' => {
+                    self.advance();
+                    return self.make_token(TokenKind::Semicolon, start, self.index);
+                }
+                '(' => {
+                    self.advance();
+                    return self.make_token(TokenKind::LeftParen, start, self.index);
+                }
+                ')' => {
+                    self.advance();
+                    return self.make_token(TokenKind::RightParen, start, self.index);
+                }
+                '{' => {
+                    self.advance();
+                    return self.make_token(TokenKind::LeftBrace, start, self.index);
+                }
+                '}' => {
+                    self.advance();
+                    return self.make_token(TokenKind::RightBrace, start, self.index);
+                }
                 _ => {
                     self.advance();
                     continue;
@@ -290,5 +453,3 @@ impl Lexer {
         }
     }
 }
-
-

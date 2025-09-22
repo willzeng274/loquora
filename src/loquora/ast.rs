@@ -21,12 +21,34 @@ pub enum ExprKind {
     Char(char),
     Bool(bool),
     Null,
-    BinaryOp { op: TokenKind, left: Box<Expr>, right: Box<Expr> },
-    UnaryOp { op: TokenKind, expr: Box<Expr> },
-    Ternary { cond: Box<Expr>, if_true: Box<Expr>, if_false: Box<Expr> },
-    Quaternary { cond: Box<Expr>, if_true: Box<Expr>, if_false: Box<Expr>, if_null: Box<Expr> },
-    Call { callee: Box<Expr>, args: Vec<Expr> },
-    Property { object: Box<Expr>, property: String },
+    BinaryOp {
+        op: TokenKind,
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    UnaryOp {
+        op: TokenKind,
+        expr: Box<Expr>,
+    },
+    Ternary {
+        cond: Box<Expr>,
+        if_true: Box<Expr>,
+        if_false: Box<Expr>,
+    },
+    Quaternary {
+        cond: Box<Expr>,
+        if_true: Box<Expr>,
+        if_false: Box<Expr>,
+        if_null: Box<Expr>,
+    },
+    Call {
+        callee: Box<Expr>,
+        args: Vec<Expr>,
+    },
+    Property {
+        object: Box<Expr>,
+        property: String,
+    },
 }
 
 pub type Expr = Spanned<ExprKind>;
@@ -59,22 +81,71 @@ pub struct ParamDecl {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StmtKind {
-    ImportModule { module: Vec<String> },
-    ImportFrom { module: Vec<String>, items: Vec<ImportItem> },
-    Export { items: Vec<ExportItem> },
-    SchemaDecl { name: String, fields: Vec<SchemaField> },
-    StructDecl { name: String, members: Vec<StructMember> },
-    TemplateDecl { name: String, params: Vec<ParamDecl>, body: String },
-    ModelDecl { name: String, base: Option<String>, members: Vec<ModelMember> },
-    ToolDecl { name: String, params: Vec<ParamDecl>, return_type: Option<TypeExpr>, body: Vec<Stmt> },
-    Assignment { target: Vec<String>, value: Expr },
-    ExprStmt { expr: Expr },
-    With { expr: Expr, body: Vec<Stmt> },
-    Loop { body: Vec<Stmt> },
-    If { arms: Vec<(Expr, Vec<Stmt>)>, else_body: Option<Vec<Stmt>> },
-    While { cond: Expr, body: Vec<Stmt> },
-    For { init: Option<(Vec<String>, Expr)>, cond: Option<Expr>, step: Option<Expr>, body: Vec<Stmt> },
-    Return { expr: Option<Expr> },
+    ImportModule {
+        module: Vec<String>,
+    },
+    ImportFrom {
+        module: Vec<String>,
+        items: Vec<ImportItem>,
+    },
+    Export {
+        items: Vec<ExportItem>,
+    },
+    SchemaDecl {
+        name: String,
+        fields: Vec<SchemaField>,
+    },
+    StructDecl {
+        name: String,
+        members: Vec<StructMember>,
+    },
+    TemplateDecl {
+        name: String,
+        params: Vec<ParamDecl>,
+        body: String,
+    },
+    ModelDecl {
+        name: String,
+        base: Option<String>,
+        members: Vec<ModelMember>,
+    },
+    ToolDecl {
+        name: String,
+        params: Vec<ParamDecl>,
+        return_type: Option<TypeExpr>,
+        body: Vec<Stmt>,
+    },
+    Assignment {
+        target: Vec<String>,
+        value: Expr,
+    },
+    ExprStmt {
+        expr: Expr,
+    },
+    With {
+        expr: Expr,
+        body: Vec<Stmt>,
+    },
+    Loop {
+        body: Vec<Stmt>,
+    },
+    If {
+        arms: Vec<(Expr, Vec<Stmt>)>,
+        else_body: Option<Vec<Stmt>>,
+    },
+    While {
+        cond: Expr,
+        body: Vec<Stmt>,
+    },
+    For {
+        init: Option<(Vec<String>, Expr)>,
+        cond: Option<Expr>,
+        step: Option<Expr>,
+        body: Vec<Stmt>,
+    },
+    Return {
+        expr: Option<Expr>,
+    },
     Break,
     Continue,
 }
@@ -89,13 +160,26 @@ pub struct SchemaField {
 #[derive(Clone, Debug, PartialEq)]
 pub enum StructMember {
     SchemaField(SchemaField),
-    ToolDecl { name: String, params: Vec<ParamDecl>, return_type: Option<TypeExpr>, body: Vec<Stmt> },
+    ToolDecl {
+        name: String,
+        params: Vec<ParamDecl>,
+        return_type: Option<TypeExpr>,
+        body: Vec<Stmt>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ModelMember {
-    ToolDecl { name: String, params: Vec<ParamDecl>, return_type: Option<TypeExpr>, body: Vec<Stmt> },
-    Assignment { target: Vec<String>, value: Expr },
+    ToolDecl {
+        name: String,
+        params: Vec<ParamDecl>,
+        return_type: Option<TypeExpr>,
+        body: Vec<Stmt>,
+    },
+    Assignment {
+        target: Vec<String>,
+        value: Expr,
+    },
 }
 
 pub type Stmt = Spanned<StmtKind>;
@@ -104,5 +188,3 @@ pub type Stmt = Spanned<StmtKind>;
 pub struct Program {
     pub statements: Vec<Stmt>,
 }
-
-
