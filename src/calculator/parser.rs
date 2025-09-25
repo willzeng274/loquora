@@ -1,6 +1,6 @@
-use crate::ast::{Expr, ExprKind, Spanned, TokenKind};
-use crate::lexer::Lexer;
-use crate::token::Token;
+use crate::calculator::ast::{Expr, ExprKind, Spanned, TokenKind};
+use crate::calculator::lexer::Lexer;
+use crate::calculator::token::Token;
 
 pub struct Parser {
     lexer: Lexer,

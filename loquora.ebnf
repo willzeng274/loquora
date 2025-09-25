@@ -24,29 +24,29 @@ import_list = import_item , { "," , import_item } ;
 import_item = identifier | string_literal ;
 
 (* Schema declaration *)
-schema_decl = "schema" , identifier , "{" , { schema_field } , "}" , ";" ;
+schema_decl = "schema" , identifier , "{" , { schema_field } , "}" ;
 schema_field = identifier , type_annotation , [ null_opt_suffix ] , ";" ;
 null_opt_suffix = "?" | "!" | "?!" ;
 type_annotation = ":" , type_expr ;
 
 (* TEMPLATES: SHOULD THIS LANGUAGE EVEN HAVE THIS? *)
-template_decl = "template" , identifier , "(" , [ param_list ] , ")" , "{" , template_body , "}" , ";" ;
+template_decl = "template" , identifier , "(" , [ param_list ] , ")" , "{" , template_body , "}" ;
 template_body = string_literal | multiline_string ;
 
 (* Model declaration *)
-model_decl = "model" , identifier , [ "(" , base_model , ")" ] , "{" , { model_member } , "}" , ";" ;
+model_decl = "model" , identifier , [ "(" , base_model , ")" ] , "{" , { model_member } , "}" ;
 base_model = identifier ;
 model_member = tool_decl | assignment ;
 
 (* Struct declaration *)
-struct_decl = "struct" , identifier , "{" , { struct_member } , "}" , ";" ;
+struct_decl = "struct" , identifier , "{" , { struct_member } , "}" ;
 struct_member = schema_field | tool_decl ;
 
 (* With statement *)
-with_stmt = "with" , expression , "{" , { statement } , "}" , ";" ;
+with_stmt = "with" , expression , "{" , { statement } , "}" ;
 
 (* Tool declaration *)
-tool_decl = "tool" , identifier , "(" , [ param_list ] , ")" , [ return_type ] , "{" , { statement } , "}" , ";" ;
+tool_decl = "tool" , identifier , "(" , [ param_list ] , ")" , [ return_type ] , "{" , { statement } , "}" ;
 return_type = "->" , type_expr ;
 param_list = param , { "," , param } ;
 param = identifier , type_annotation ;

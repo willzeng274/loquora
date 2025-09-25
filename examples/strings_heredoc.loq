@@ -1,13 +1,24 @@
 name = "Loquora";
-msg = "Hello, {name}!";
+print(name);
+
 ch = 'x';
+print(ch);
 
-template t1(param: String) {
-  <<~DOC
-This is a heredoc example for {param}
-DOC
-};
+multiline = <<~END
+This is a multiline heredoc string.
+It can span multiple lines
+and preserve formatting.
 
-hello = <<~TEST
-me when the impostor is sus
-TEST;
+This is line 5 of the heredoc.
+END;
+
+print(multiline);
+
+poem = <<~POEM
+Roses are red,
+Violets are blue,
+Loquora is awesome,
+And so are you!
+POEM;
+
+print(poem);

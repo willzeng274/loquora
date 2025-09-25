@@ -1,3 +1,18 @@
 x = 1 + 2 * 3 - 4 / 2;
+print(x);
+
 y = (x << 1) & 15 | 2 ^ 3;
-result = user ?? user.name :: "Anonymous" !! panic("No user!");
+print(y);
+
+// Quaternary syntax: condition ?? if_true :: if_false !! if_null
+user = null;
+result = user ?? "HasUser" :: "NoUser" !! "UserIsNull";
+print(result);
+
+user = "";
+result = user ?? "HasUser" :: "NoUser" !! "UserIsNull";
+print(result);
+
+user = "test";
+result = user ?? "HasUser" :: "NoUser" !! "UserIsNull";
+print(result);

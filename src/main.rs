@@ -1,9 +1,5 @@
-mod ast;
-mod interpreter;
-mod lexer;
+mod calculator;
 mod loquora;
-mod parser;
-mod token;
 
 use std::env;
 use std::fs;
@@ -12,7 +8,9 @@ use std::io::Write;
 
 use loquora::lexer as lqlexer;
 use loquora::parser as lqparser;
+use loquora::interpreter::Interpreter;
 use loquora::token::TokenKind;
+
 
 fn main() {
     if let Some(path) = env::args().nth(1) {
@@ -21,7 +19,17 @@ fn main() {
             let lx = lqlexer::Lexer::new(source.clone());
             let mut parser = lqparser::Parser::new(lx);
             let program = parser.parse_program();
+
+            println!("=== AST ===");
             println!("{:#?}", program);
+            println!();
+
+            println!("=== Interpretation ===");
+            let mut interpreter = Interpreter::new();
+            match interpreter.interpret_program(&program) {
+                Ok(result) => println!("Result: {}", result),
+                Err(error) => eprintln!("Runtime Error: {}", error),
+            }
             return;
         }
     }
@@ -61,7 +69,16 @@ fn main() {
 
         match parsed {
             Ok(program) => {
+                println!("=== AST ===");
                 println!("{:#?}", program);
+                println!();
+
+                println!("=== Interpretation ===");
+                let mut interpreter = Interpreter::new();
+                match interpreter.interpret_program(&program) {
+                    Ok(result) => println!("Result: {}", result),
+                    Err(error) => eprintln!("Runtime Error: {}", error),
+                }
             }
             Err(_) => {
                 eprintln!("Parse error. Input was not a valid statement.");
@@ -72,9 +89,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::interpreter::Interpreter;
-    use crate::lexer::Lexer;
-    use crate::parser::Parser;
+    use crate::calculator::interpreter::Interpreter;
+    use crate::calculator::lexer::Lexer;
+    use crate::calculator::parser::Parser;
 
     fn make_interpreter(text: &str) -> Interpreter {
         let lexer = Lexer::new(String::from(text));

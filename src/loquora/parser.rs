@@ -760,7 +760,7 @@ impl Parser {
     fn parse_tool_decl(&mut self) -> Stmt {
         let start = self.current.span.start;
         let (name, params, ret, body) = self.parse_tool_decl_inner();
-        self.eat(TokenKind::Semicolon);
+        // Tool declarations don't end with semicolons, they end with }
         Spanned::new(
             StmtKind::ToolDecl {
                 name,
@@ -1005,7 +1005,11 @@ impl Parser {
             }
             TokenKind::MultilineString => {
                 let start = self.current.span.start;
-                let s = self.slice_current().to_string();
+                let mut s = self.slice_current().to_string();
+                // Remove trailing newline from heredoc strings
+                if s.ends_with('\n') {
+                    s.pop();
+                }
                 let end = self.current.span.end;
                 self.advance();
                 Spanned::new(ExprKind::String(s), start..end)
@@ -1039,7 +1043,7 @@ impl Parser {
                 self.eat(TokenKind::RightParen);
                 e
             }
-            _ => panic!("primary expected"),
+            _ => panic!("primary expected, found {:?} at span {:?}", self.current.kind, self.current.span),
         }
     }
 }

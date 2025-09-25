@@ -1,5 +1,5 @@
-use crate::ast::{Expr, ExprKind, TokenKind};
-use crate::parser::Parser;
+use crate::calculator::ast::{Expr, ExprKind, TokenKind};
+use crate::calculator::parser::Parser;
 
 pub struct Interpreter {
     parser: Parser,

@@ -1,13 +1,18 @@
+// ! = required, ? = nullable, ?! = nullable and optional
 schema User {
-  id: Int!;
-  name: String?;
-  email: String?!;
+    id: Int!;           // Required integer
+    name: String?;      // Nullable string
+    email: String?!;    // Nullable and optional string
 };
 
 struct Account {
-  user: User!;
+    user: User!;        // Required User field
+    balance: Int;       // Simple integer field
 };
 
 model PremiumUser(User) {
-  status = "gold";
+    status = "gold";    // Default field value
+    tier = 1;          // Premium tier
 };
+
+print("Schema and model definitions loaded");

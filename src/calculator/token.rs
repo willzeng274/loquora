@@ -1,4 +1,4 @@
-use crate::ast::{Span, TokenKind};
+use crate::calculator::ast::{Span, TokenKind};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Token {

@@ -1,18 +1,21 @@
 tool add(a: Int, b: Int) -> Int {
-  result = a + b;
-  return result;
-};
+    result = a + b;
+    return result;
+}
 
-tool main() {
-  i = 0;
-  while i < 3 {
+sum = add(5, 3);
+print(sum);
+
+i = 0;
+count = 0;
+while i < 3 {
+    print(i);
     if i == 1 {
-      i = i + 1;
-      continue;
+        print(999);
+        i = i + 1;
+        continue;
     }
-    with add {
-      x = add(1, i);
-    };
+    count = count + 1;
     i = i + 1;
-  }
-};
+}
+print(count);
