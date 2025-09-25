@@ -49,6 +49,10 @@ pub enum ExprKind {
         object: Box<Expr>,
         property: String,
     },
+    ObjectInit {
+        type_name: String,
+        fields: Vec<FieldInit>,
+    },
 }
 
 pub type Expr = Spanned<ExprKind>;
@@ -183,6 +187,12 @@ pub enum ModelMember {
 }
 
 pub type Stmt = Spanned<StmtKind>;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FieldInit {
+    pub name: String,
+    pub value: Expr,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Program {

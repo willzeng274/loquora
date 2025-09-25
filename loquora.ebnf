@@ -25,7 +25,7 @@ import_item = identifier | string_literal ;
 
 (* Schema declaration *)
 schema_decl = "schema" , identifier , "{" , { schema_field } , "}" ;
-schema_field = identifier , type_annotation , [ null_opt_suffix ] , ";" ;
+schema_field = identifier , type_annotation , [ null_opt_suffix ] , "," ;
 null_opt_suffix = "?" | "!" | "?!" ;
 type_annotation = ":" , type_expr ;
 
@@ -98,7 +98,11 @@ postfix_suffix = property_access | function_call_suffix ;
 property_access = "." , identifier ;
 function_call_suffix = "(" , [ arguments ] , ")" ;
 
-primary_expr = identifier | literal | paren_expr ;
+primary_expr = identifier | literal | paren_expr | object_init ;
+
+object_init = identifier , "{" , [ field_init_list ] , "}" ;
+field_init_list = field_init , { "," , field_init } ;
+field_init = identifier , ":" , expression ;
 
 arguments = expression , { "," , expression } ;
 

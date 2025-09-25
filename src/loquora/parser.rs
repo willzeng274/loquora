@@ -584,7 +584,9 @@ impl Parser {
             } else {
                 None
             };
-            self.eat(TokenKind::Semicolon);
+            if self.at(TokenKind::Comma) {
+                self.advance();
+            }
             fields.push(SchemaField {
                 name: fname,
                 ty,
@@ -592,7 +594,6 @@ impl Parser {
             });
         }
         self.eat(TokenKind::RightBrace);
-        self.eat(TokenKind::Semicolon);
         Spanned::new(
             StmtKind::SchemaDecl { name, fields },
             start..self.current.span.start,
@@ -682,7 +683,6 @@ impl Parser {
             }
         }
         self.eat(TokenKind::RightBrace);
-        self.eat(TokenKind::Semicolon);
         Spanned::new(
             StmtKind::ModelDecl {
                 name,
@@ -741,7 +741,9 @@ impl Parser {
                 } else {
                     None
                 };
-                self.eat(TokenKind::Semicolon);
+                if self.at(TokenKind::Comma) {
+                    self.advance();
+                }
                 members.push(StructMember::SchemaField(SchemaField {
                     name: fname,
                     ty,
@@ -750,7 +752,6 @@ impl Parser {
             }
         }
         self.eat(TokenKind::RightBrace);
-        self.eat(TokenKind::Semicolon);
         Spanned::new(
             StmtKind::StructDecl { name, members },
             start..self.current.span.start,
@@ -978,9 +979,16 @@ impl Parser {
             TokenKind::Identifier => {
                 let start = self.current.span.start;
                 let s = self.slice_current().to_string();
-                let end = self.current.span.end;
                 self.advance();
-                Spanned::new(ExprKind::Identifier(s), start..end)
+
+                if self.at(TokenKind::LeftBrace) {
+                    let fields = self.parse_field_init_list();
+                    let end = self.current.span.start; // After eating the RightBrace
+                    Spanned::new(ExprKind::ObjectInit { type_name: s, fields }, start..end)
+                } else {
+                    let end = self.current.span.start;
+                    Spanned::new(ExprKind::Identifier(s), start..end)
+                }
             }
             TokenKind::Int => {
                 let start = self.current.span.start;
@@ -1045,5 +1053,39 @@ impl Parser {
             }
             _ => panic!("primary expected, found {:?} at span {:?}", self.current.kind, self.current.span),
         }
+    }
+
+    fn parse_field_init_list(&mut self) -> Vec<FieldInit> {
+        self.eat(TokenKind::LeftBrace);
+        let mut fields = Vec::new();
+
+        if !self.at(TokenKind::RightBrace) {
+            loop {
+                let field_name = if let TokenKind::Identifier = self.current.kind {
+                    let name = self.slice_current().to_string();
+                    self.advance();
+                    name
+                } else {
+                    panic!("Expected field name, found {:?}", self.current.kind);
+                };
+
+                self.eat(TokenKind::Colon);
+                let value = self.parse_expression();
+
+                fields.push(FieldInit {
+                    name: field_name,
+                    value,
+                });
+
+                if self.at(TokenKind::Comma) {
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        self.eat(TokenKind::RightBrace);
+        fields
     }
 }

@@ -290,6 +290,10 @@ impl Interpreter {
                     _ => self.interpret_expression(if_false),
                 }
             }
+
+            ExprKind::ObjectInit { type_name, fields } => {
+                self.create_object_instance(type_name, fields)
+            }
         }
     }
 
@@ -682,6 +686,67 @@ impl Interpreter {
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::Null, Value::Null) => true,
             _ => false,
+        }
+    }
+
+    fn create_object_instance(&mut self, type_name: &str, field_inits: &[FieldInit]) -> Result<Value, RuntimeError> {
+        let type_def = match self.env.type_definitions.get(type_name) {
+            Some(def) => def.clone(),
+            None => return Err(RuntimeError::UndefinedType(type_name.to_string())),
+        };
+
+        let mut fields = std::collections::HashMap::new();
+        for field_init in field_inits {
+            let value = self.interpret_expression(&field_init.value)?;
+            fields.insert(field_init.name.clone(), value);
+        }
+
+        match type_def {
+            TypeDef::Schema { fields: schema_fields, .. } => {
+                for field in &schema_fields {
+                    if !fields.contains_key(&field.name) {
+                        return Err(RuntimeError::RequiredFieldMissing(format!("{}.{}", type_name, field.name)));
+                    }
+                }
+
+                // TODO: Add type validation here?
+                Ok(Value::Object {
+                    type_name: type_name.to_string(),
+                    fields,
+                })
+            }
+            TypeDef::Struct { members, .. } => {
+                for member in members {
+                    if let StructMember::SchemaField(field) = member {
+                        if !fields.contains_key(&field.name) {
+                            return Err(RuntimeError::RequiredFieldMissing(format!("{}.{}", type_name, field.name)));
+                        }
+                    }
+                }
+
+                Ok(Value::Object {
+                    type_name: type_name.to_string(),
+                    fields,
+                })
+            }
+            TypeDef::Model { members, .. } => {
+                for member in members {
+                    if let ModelMember::Assignment { target, .. } = member {
+                        let field_name = &target[0];
+                        if !fields.contains_key(field_name) {
+                            return Err(RuntimeError::RequiredFieldMissing(format!("{}.{}", type_name, field_name)));
+                        }
+                    }
+                }
+
+                Ok(Value::Object {
+                    type_name: type_name.to_string(),
+                    fields,
+                })
+            }
+            TypeDef::Template { .. } => {
+                Err(RuntimeError::InvalidArguments(format!("Cannot instantiate template {}", type_name)))
+            }
         }
     }
 }

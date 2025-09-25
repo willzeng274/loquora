@@ -1,18 +1,53 @@
 // ! = required, ? = nullable, ?! = nullable and optional
-schema User {
-    id: Int!;           // Required integer
-    name: String?;      // Nullable string
-    email: String?!;    // Nullable and optional string
+
+schema Person {
+    id: Int!,
+    name: String?,
+    age: Int!,
+    email: String?!,
+}
+
+struct Address {
+    street: String,
+    city: String,
+    zip_code: String,
+    person: Person!,
+}
+
+model PremiumUser(Person) {
+    status = "gold";
+    tier = 1;
+}
+
+john = Person {
+    id: 1,
+    name: "John Doe",
+    age: 30,
+    email: "john@example.com"
 };
 
-struct Account {
-    user: User!;        // Required User field
-    balance: Int;       // Simple integer field
+address = Address {
+    street: "123 Main St",
+    city: "Anytown",
+    zip_code: "12345",
+    person: john
 };
 
-model PremiumUser(User) {
-    status = "gold";    // Default field value
-    tier = 1;          // Premium tier
+test = PremiumUser {
+    status: "gold",
+    tier: 1
 };
 
-print("Schema and model definitions loaded");
+print(test);
+
+print("John", john);
+
+print("Address", address);
+
+john.age = 31;
+print("Age updated");
+print(john.age);
+print(john);
+
+// right now we pass by val
+print("Still the same addr:", address);
