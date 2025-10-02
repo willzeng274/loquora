@@ -215,57 +215,9 @@ impl Interpreter {
                 Ok(result)
             }
 
-            StmtKind::Load { path, alias } => {
-                let module = self.module_cache.load_module(path)?;
+            StmtKind::Load { path, alias } => self.handle_load(path, alias, false),
 
-                if let Some(prefix) = alias {
-                    let module_value = Value::Module {
-                        tools: module.exports.tools.clone(),
-                        structs: module.exports.structs.clone(),
-                        templates: module.exports.templates.clone(),
-                    };
-                    self.env.set_path(&vec![prefix.clone()], module_value)?;
-                } else {
-                    for (_name, tool) in module.exports.tools {
-                        self.env
-                            .define_tool(tool.name.clone(), tool.params, tool.body);
-                    }
-                    for (_name, struct_def) in module.exports.structs {
-                        self.env.define_type(struct_def);
-                    }
-                    for (_name, template_def) in module.exports.templates {
-                        self.env.define_type(template_def);
-                    }
-                }
-
-                Ok(ControlFlow::None)
-            }
-            
-            StmtKind::LoadAndRun { path, alias } => {
-                let module = self.module_cache.load_module_and_run(path)?;
-
-                if let Some(prefix) = alias {
-                    let module_value = Value::Module {
-                        tools: module.exports.tools.clone(),
-                        structs: module.exports.structs.clone(),
-                        templates: module.exports.templates.clone(),
-                    };
-                    self.env.set_path(&vec![prefix.clone()], module_value)?;
-                } else {
-                    for (_name, tool) in module.exports.tools {
-                        self.env
-                            .define_tool(tool.name.clone(), tool.params, tool.body);
-                    }
-                    for (_name, struct_def) in module.exports.structs {
-                        self.env.define_type(struct_def);
-                    }
-                    for (_name, template_def) in module.exports.templates {
-                        self.env.define_type(template_def);
-                    }
-                }
-
-                Ok(ControlFlow::None)
-            }
+            StmtKind::LoadAndRun { path, alias } => self.handle_load(path, alias, true),
 
             StmtKind::ExportDecl { decl } => self.interpret_statement(decl),
         }
@@ -635,6 +587,41 @@ impl Interpreter {
             }
             _ => Err(RuntimeError::UndefinedTool(name.to_string())),
         }
+    }
+
+    fn handle_load(
+        &mut self,
+        path: &Vec<String>,
+        alias: &Option<String>,
+        run: bool,
+    ) -> Result<ControlFlow, RuntimeError> {
+        let module = if run {
+            self.module_cache.load_module(path, true)?
+        } else {
+            self.module_cache.load_module(path, false)?
+        };
+
+        if let Some(prefix) = alias {
+            let module_value = Value::Module {
+                tools: module.exports.tools.clone(),
+                structs: module.exports.structs.clone(),
+                templates: module.exports.templates.clone(),
+            };
+            self.env.set_path(&vec![prefix.clone()], module_value)?;
+        } else {
+            for (_name, tool) in module.exports.tools {
+                self.env
+                    .define_tool(tool.name.clone(), tool.params, tool.body);
+            }
+            for (_name, struct_def) in module.exports.structs {
+                self.env.define_type(struct_def);
+            }
+            for (_name, template_def) in module.exports.templates {
+                self.env.define_type(template_def);
+            }
+        }
+
+        Ok(ControlFlow::None)
     }
 
     fn add_values(&self, left: Value, right: Value) -> Result<Value, RuntimeError> {

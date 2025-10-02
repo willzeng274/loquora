@@ -2,7 +2,6 @@ use crate::loquora::ast::*;
 use crate::loquora::environment::{ToolDef, TypeDef};
 use crate::loquora::lexer::Lexer;
 use crate::loquora::parser::Parser;
-use crate::loquora::interpreter::Interpreter;
 use crate::loquora::value::RuntimeError;
 use std::collections::HashMap;
 use std::fs;
@@ -96,7 +95,11 @@ impl ModuleCache {
         )))
     }
 
-    pub fn load_module(&mut self, module_path: &[String]) -> Result<Module, RuntimeError> {
+    pub fn load_module(
+        &mut self,
+        module_path: &[String],
+        run: bool,
+    ) -> Result<Module, RuntimeError> {
         let file_path = self.resolve_module_path(module_path)?;
 
         if let Some(module) = self.modules.get(&file_path) {
@@ -124,70 +127,33 @@ impl ModuleCache {
         let lexer = Lexer::new(source);
         let mut parser = Parser::new(lexer);
         let program = parser.parse_program();
+        if !run {
+            let exports = self.extract_exports(&program)?;
 
-        // we don't actually run the file, we only extract the exported structs, tools, templates, etc
-        let exports = self.extract_exports(&program)?;
+            let module = Module {
+                path: file_path.clone(),
+                exports,
+                initialized: true,
+            };
 
-        let module = Module {
-            path: file_path.clone(),
-            exports,
-            initialized: true,
-        };
+            self.modules.insert(file_path.clone(), module.clone());
+            self.loading_stack.pop();
 
-        self.modules.insert(file_path.clone(), module.clone());
-        self.loading_stack.pop();
+            Ok(module)
+        } else {
+            let exports = self.extract_exports(&program)?;
 
-        Ok(module)
-    }
+            let module = Module {
+                path: file_path.clone(),
+                exports,
+                initialized: true,
+            };
 
-    pub fn load_module_and_run(&mut self, module_path: &[String]) -> Result<Module, RuntimeError> {
-        let file_path = self.resolve_module_path(module_path)?;
+            self.modules.insert(file_path.clone(), module.clone());
+            self.loading_stack.pop();
 
-        if let Some(module) = self.modules.get(&file_path) {
-            if !module.initialized {
-                return Err(RuntimeError::Custom(format!(
-                    "Circular import detected: {} is currently being loaded",
-                    file_path.display()
-                )));
-            }
-            return Ok(module.clone());
+            Ok(module)
         }
-
-        if self.loading_stack.contains(&file_path) {
-            return Err(RuntimeError::Custom(format!(
-                "Circular import detected: {}",
-                file_path.display()
-            )));
-        }
-
-        self.loading_stack.push(file_path.clone());
-
-        let source = fs::read_to_string(&file_path)
-            .map_err(|e| RuntimeError::Custom(format!("Failed to read module: {}", e)))?;
-
-        let lexer = Lexer::new(source);
-        let mut parser = Parser::new(lexer);
-        let program = parser.parse_program();
-        let mut interpreter = Interpreter::new();
-
-        match interpreter.interpret_program(&program) {
-            Ok(result) => println!("Result for file path {}: {}", file_path.display(), result),
-            Err(error) => eprintln!("Runtime Error for file path {}: {}", file_path.display(), error),
-        }
-
-        // we don't actually run the file, we only extract the exported structs, tools, templates, etc
-        let exports = self.extract_exports(&program)?;
-
-        let module = Module {
-            path: file_path.clone(),
-            exports,
-            initialized: true,
-        };
-
-        self.modules.insert(file_path.clone(), module.clone());
-        self.loading_stack.pop();
-
-        Ok(module)
     }
 
     fn extract_exports(&mut self, program: &Program) -> Result<ModuleExports, RuntimeError> {

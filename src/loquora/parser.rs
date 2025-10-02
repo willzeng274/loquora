@@ -50,10 +50,10 @@ impl Parser {
 
     fn parse_top_level(&mut self) -> Stmt {
         if self.at(TokenKind::Load) {
-            return self.parse_load_stmt();
+            return self.parse_load_stmt_with_run(false);
         }
         if self.at(TokenKind::LoadAndRun) {
-            return self.parse_load_and_run_stmt();
+            return self.parse_load_stmt_with_run(true);
         }
         if self.at(TokenKind::Export) {
             return self.parse_export_decl();
@@ -74,9 +74,13 @@ impl Parser {
         &self.input[self.current.span.clone()]
     }
 
-    fn parse_load_stmt(&mut self) -> Stmt {
+    fn parse_load_stmt_with_run(&mut self, run: bool) -> Stmt {
         let start = self.current.span.start;
-        self.eat(TokenKind::Load);
+        if !run {
+            self.eat(TokenKind::Load);
+        } else {
+            self.eat(TokenKind::LoadAndRun);
+        }
 
         let mut path = Vec::new();
         if let TokenKind::Identifier = self.current.kind {
@@ -108,54 +112,19 @@ impl Parser {
         } else {
             None
         };
-
-        self.eat(TokenKind::Semicolon);
-        Spanned::new(
-            StmtKind::Load { path, alias },
-            start..self.current.span.start,
-        )
-    }
-
-    fn parse_load_and_run_stmt(&mut self) -> Stmt {
-        let start = self.current.span.start;
-        self.eat(TokenKind::LoadAndRun);
-
-        let mut path = Vec::new();
-        if let TokenKind::Identifier = self.current.kind {
-            path.push(self.slice_current().to_string());
-            self.advance();
+        if !run {
+            self.eat(TokenKind::Semicolon);
+            Spanned::new(
+                StmtKind::Load { path, alias },
+                start..self.current.span.start,
+            )
         } else {
-            panic!("Expected module path after load");
+            self.eat(TokenKind::Semicolon);
+            Spanned::new(
+                StmtKind::LoadAndRun { path, alias },
+                start..self.current.span.start,
+            )
         }
-
-        while self.at(TokenKind::Divide) {
-            self.advance();
-            if let TokenKind::Identifier = self.current.kind {
-                path.push(self.slice_current().to_string());
-                self.advance();
-            } else {
-                panic!("Expected identifier after /");
-            }
-        }
-
-        let alias = if self.at(TokenKind::As) {
-            self.advance();
-            if let TokenKind::Identifier = self.current.kind {
-                let a = self.slice_current().to_string();
-                self.advance();
-                Some(a)
-            } else {
-                panic!("Expected alias identifier");
-            }
-        } else {
-            None
-        };
-
-        self.eat(TokenKind::Semicolon);
-        Spanned::new(
-            StmtKind::LoadAndRun { path, alias },
-            start..self.current.span.start,
-        )
     }
 
     fn parse_export_decl(&mut self) -> Stmt {
