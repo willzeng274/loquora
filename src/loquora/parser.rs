@@ -22,11 +22,11 @@ impl Parser {
             in_loop: 0,
         }
     }
-
+    
     fn advance(&mut self) {
         self.current = self.lexer.next_token();
     }
-
+    
     fn eat(&mut self, expected: TokenKind) {
         if std::mem::discriminant(&self.current.kind) == std::mem::discriminant(&expected) {
             self.advance();
@@ -34,11 +34,11 @@ impl Parser {
             panic!("Expected {:?}, found {:?}", expected, self.current.kind);
         }
     }
-
+    
     fn at(&self, kind: TokenKind) -> bool {
         std::mem::discriminant(&self.current.kind) == std::mem::discriminant(&kind)
     }
-
+    
     pub fn parse_program(&mut self) -> Program {
         let mut statements: Vec<Stmt> = Vec::new();
         while !self.at(TokenKind::EOF) {
@@ -47,13 +47,13 @@ impl Parser {
         }
         Program { statements }
     }
-
+    
     fn parse_top_level(&mut self) -> Stmt {
         if self.at(TokenKind::Load) {
-            return self.parse_load_stmt();
+            return self.parse_load_stmt_with_run(false);
         }
         if self.at(TokenKind::LoadAndRun) {
-            return self.parse_load_and_run_stmt();
+            return self.parse_load_stmt_with_run(true);
         }
         if self.at(TokenKind::Export) {
             return self.parse_export_decl();
@@ -69,15 +69,19 @@ impl Parser {
         }
         self.parse_statement()
     }
-
+    
     fn slice_current<'a>(&'a self) -> &'a str {
         &self.input[self.current.span.clone()]
     }
-
-    fn parse_load_stmt(&mut self) -> Stmt {
+    
+    fn parse_load_stmt_with_run(&mut self, run: bool) -> Stmt {
         let start = self.current.span.start;
-        self.eat(TokenKind::Load);
-
+        if !run {
+            self.eat(TokenKind::Load);
+        } else {
+            self.eat(TokenKind::LoadAndRun);
+        }
+        
         let mut path = Vec::new();
         if let TokenKind::Identifier = self.current.kind {
             path.push(self.slice_current().to_string());
@@ -85,7 +89,7 @@ impl Parser {
         } else {
             panic!("Expected module path after load");
         }
-
+        
         while self.at(TokenKind::Divide) {
             self.advance();
             if let TokenKind::Identifier = self.current.kind {
@@ -95,7 +99,7 @@ impl Parser {
                 panic!("Expected identifier after /");
             }
         }
-
+        
         let alias = if self.at(TokenKind::As) {
             self.advance();
             if let TokenKind::Identifier = self.current.kind {
@@ -108,60 +112,25 @@ impl Parser {
         } else {
             None
         };
-
-        self.eat(TokenKind::Semicolon);
-        Spanned::new(
-            StmtKind::Load { path, alias },
-            start..self.current.span.start,
-        )
-    }
-
-    fn parse_load_and_run_stmt(&mut self) -> Stmt {
-        let start = self.current.span.start;
-        self.eat(TokenKind::LoadAndRun);
-
-        let mut path = Vec::new();
-        if let TokenKind::Identifier = self.current.kind {
-            path.push(self.slice_current().to_string());
-            self.advance();
+        if !run {
+            self.eat(TokenKind::Semicolon);
+            Spanned::new(
+                StmtKind::Load { path, alias },
+                start..self.current.span.start,
+            )
         } else {
-            panic!("Expected module path after load");
+            self.eat(TokenKind::Semicolon);
+            Spanned::new(
+                StmtKind::LoadAndRun { path, alias },
+                start..self.current.span.start,
+            )
         }
-
-        while self.at(TokenKind::Divide) {
-            self.advance();
-            if let TokenKind::Identifier = self.current.kind {
-                path.push(self.slice_current().to_string());
-                self.advance();
-            } else {
-                panic!("Expected identifier after /");
-            }
-        }
-
-        let alias = if self.at(TokenKind::As) {
-            self.advance();
-            if let TokenKind::Identifier = self.current.kind {
-                let a = self.slice_current().to_string();
-                self.advance();
-                Some(a)
-            } else {
-                panic!("Expected alias identifier");
-            }
-        } else {
-            None
-        };
-
-        self.eat(TokenKind::Semicolon);
-        Spanned::new(
-            StmtKind::LoadAndRun { path, alias },
-            start..self.current.span.start,
-        )
     }
-
+    
     fn parse_export_decl(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Export);
-
+        
         let decl = if self.at(TokenKind::Struct) {
             self.parse_struct_decl()
         } else if self.at(TokenKind::Tool) {
@@ -171,7 +140,7 @@ impl Parser {
         } else {
             panic!("Expected struct, tool, or template after export");
         };
-
+        
         Spanned::new(
             StmtKind::ExportDecl {
                 decl: Box::new(decl),
@@ -179,7 +148,7 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn is_assignment_start(&mut self) -> bool {
         if !self.at(TokenKind::Identifier) {
             return false;
@@ -197,7 +166,7 @@ impl Parser {
             return matches!(next.kind, TokenKind::Assign);
         }
     }
-
+    
     fn parse_assignable_path(&mut self) -> (Vec<String>, Span) {
         let mut parts = Vec::new();
         let start = self.current.span.start;
@@ -218,11 +187,11 @@ impl Parser {
         }
         (parts, start..end)
     }
-
+    
     fn parse_expression(&mut self) -> Expr {
         self.parse_quaternary()
     }
-
+    
     fn parse_quaternary(&mut self) -> Expr {
         let left = self.parse_ternary();
         if self.at(TokenKind::QQuestion) {
@@ -246,7 +215,7 @@ impl Parser {
         }
         left
     }
-
+    
     fn parse_ternary(&mut self) -> Expr {
         let cond = self.parse_logical_or();
         if self.at(TokenKind::Question) {
@@ -267,7 +236,7 @@ impl Parser {
         }
         cond
     }
-
+    
     fn parse_statement(&mut self) -> Stmt {
         if self.at(TokenKind::With) {
             return self.parse_with_stmt();
@@ -298,7 +267,7 @@ impl Parser {
         }
         self.parse_expr_stmt()
     }
-
+    
     fn parse_with_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::With);
@@ -312,7 +281,7 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn parse_loop_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Loop);
@@ -323,7 +292,7 @@ impl Parser {
         self.eat(TokenKind::RightBrace);
         Spanned::new(StmtKind::Loop { body }, start..self.current.span.start)
     }
-
+    
     fn parse_if_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         let mut arms: Vec<(Expr, Vec<Stmt>)> = Vec::new();
@@ -355,7 +324,7 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn parse_while_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::While);
@@ -370,7 +339,7 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn parse_for_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::For);
@@ -393,7 +362,7 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn parse_return_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Return);
@@ -405,21 +374,21 @@ impl Parser {
         self.eat(TokenKind::Semicolon);
         Spanned::new(StmtKind::Return { expr }, start..self.current.span.start)
     }
-
+    
     fn parse_break_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Break);
         self.eat(TokenKind::Semicolon);
         Spanned::new(StmtKind::Break, start..self.current.span.start)
     }
-
+    
     fn parse_continue_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Continue);
         self.eat(TokenKind::Semicolon);
         Spanned::new(StmtKind::Continue, start..self.current.span.start)
     }
-
+    
     fn parse_assignment_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         let (target, _) = self.parse_assignable_path();
@@ -431,14 +400,14 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn parse_expr_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         let expr = self.parse_expression();
         self.eat(TokenKind::Semicolon);
         Spanned::new(StmtKind::ExprStmt { expr }, start..self.current.span.start)
     }
-
+    
     fn parse_statements_until(&mut self, end: TokenKind) -> Vec<Stmt> {
         let mut v = Vec::new();
         while !self.at(end.clone()) && !self.at(TokenKind::EOF) {
@@ -446,7 +415,7 @@ impl Parser {
         }
         v
     }
-
+    
     fn parse_loop_body_until(&mut self) -> Vec<Stmt> {
         let mut v = Vec::new();
         while !self.at(TokenKind::RightBrace) && !self.at(TokenKind::EOF) {
@@ -462,7 +431,7 @@ impl Parser {
         }
         v
     }
-
+    
     fn parse_type_expr(&mut self) -> TypeExpr {
         let start = self.current.span.start;
         let name = match self.current.kind {
@@ -494,7 +463,7 @@ impl Parser {
         }
         Spanned::new(TypeExprKind::Name(name), start..self.current.span.start)
     }
-
+    
     fn parse_param_list(&mut self) -> Vec<ParamDecl> {
         let mut params = Vec::new();
         if self.at(TokenKind::RightParen) {
@@ -520,7 +489,7 @@ impl Parser {
         }
         params
     }
-
+    
     fn parse_template_decl(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Template);
@@ -556,7 +525,7 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn parse_struct_decl(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Struct);
@@ -621,7 +590,7 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn parse_tool_decl(&mut self) -> Stmt {
         let start = self.current.span.start;
         let (name, params, ret, body) = self.parse_tool_decl_inner();
@@ -636,7 +605,7 @@ impl Parser {
             start..self.current.span.start,
         )
     }
-
+    
     fn parse_tool_decl_inner(&mut self) -> (String, Vec<ParamDecl>, Option<TypeExpr>, Vec<Stmt>) {
         self.eat(TokenKind::Tool);
         let name = match self.current.kind {
@@ -664,7 +633,7 @@ impl Parser {
         self.eat(TokenKind::RightBrace);
         (name, params, ret, body)
     }
-
+    
     fn parse_logical_or(&mut self) -> Expr {
         self.parse_left_assoc_bin(|p| p.parse_logical_and(), &[TokenKind::LogicalOr])
     }
@@ -690,10 +659,10 @@ impl Parser {
         self.parse_left_assoc_bin(
             |p| p.parse_shift(),
             &[
-                TokenKind::Less,
-                TokenKind::Greater,
-                TokenKind::LessEqual,
-                TokenKind::GreaterEqual,
+            TokenKind::Less,
+            TokenKind::Greater,
+            TokenKind::LessEqual,
+            TokenKind::GreaterEqual,
             ],
         )
     }
@@ -713,17 +682,17 @@ impl Parser {
         self.parse_left_assoc_bin(
             |p| p.parse_unary(),
             &[
-                TokenKind::Multiply,
-                TokenKind::Divide,
-                TokenKind::Modulo,
-                TokenKind::At,
+            TokenKind::Multiply,
+            TokenKind::Divide,
+            TokenKind::Modulo,
+            TokenKind::At,
             ],
         )
     }
-
+    
     fn parse_left_assoc_bin<F>(&mut self, mut sub: F, ops: &[TokenKind]) -> Expr
     where
-        F: FnMut(&mut Parser) -> Expr,
+    F: FnMut(&mut Parser) -> Expr,
     {
         let mut node = sub(self);
         loop {
@@ -753,12 +722,12 @@ impl Parser {
         }
         node
     }
-
+    
     fn parse_unary(&mut self) -> Expr {
         if self.at(TokenKind::BitNot)
-            || self.at(TokenKind::Minus)
-            || self.at(TokenKind::Plus)
-            || self.at(TokenKind::LogicalNot)
+        || self.at(TokenKind::Minus)
+        || self.at(TokenKind::Plus)
+        || self.at(TokenKind::LogicalNot)
         {
             let op = self.current.kind.clone();
             let start = self.current.span.start;
@@ -775,7 +744,7 @@ impl Parser {
         }
         self.parse_postfix()
     }
-
+    
     fn parse_postfix(&mut self) -> Expr {
         let mut node = self.parse_primary();
         loop {
@@ -789,7 +758,7 @@ impl Parser {
                     }
                     _ => panic!("property expected"),
                 };
-
+                
                 if self.at(TokenKind::LeftBrace) {
                     let mut peek_lexer = self.lexer.clone();
                     let next_after_brace = peek_lexer.next_token();
@@ -801,7 +770,7 @@ impl Parser {
                         }
                         _ => false,
                     };
-
+                    
                     if is_object_init {
                         let type_expr = Spanned::new(
                             ExprKind::Property {
@@ -823,7 +792,7 @@ impl Parser {
                         continue;
                     }
                 }
-
+                
                 let start = node.span.start;
                 let end = self.current.span.start;
                 node = Spanned::new(
@@ -865,14 +834,14 @@ impl Parser {
         }
         node
     }
-
+    
     fn parse_primary(&mut self) -> Expr {
         match self.current.kind {
             TokenKind::Identifier => {
                 let start = self.current.span.start;
                 let s = self.slice_current().to_string();
                 self.advance();
-
+                
                 if self.at(TokenKind::LeftBrace) {
                     let mut peek_lexer = self.lexer.clone();
                     let next_after_brace = peek_lexer.next_token();
@@ -884,7 +853,7 @@ impl Parser {
                         }
                         _ => false,
                     };
-
+                    
                     if is_object_init {
                         let type_expr = Box::new(Spanned::new(
                             ExprKind::Identifier(s.clone()),
@@ -969,11 +938,11 @@ impl Parser {
             ),
         }
     }
-
+    
     fn parse_field_init_list(&mut self) -> Vec<FieldInit> {
         self.eat(TokenKind::LeftBrace);
         let mut fields = Vec::new();
-
+        
         if !self.at(TokenKind::RightBrace) {
             loop {
                 let field_name = if let TokenKind::Identifier = self.current.kind {
@@ -983,15 +952,15 @@ impl Parser {
                 } else {
                     panic!("Expected field name, found {:?}", self.current.kind);
                 };
-
+                
                 self.eat(TokenKind::Colon);
                 let value = self.parse_expression();
-
+                
                 fields.push(FieldInit {
                     name: field_name,
                     value,
                 });
-
+                
                 if self.at(TokenKind::Comma) {
                     self.advance();
                     if self.at(TokenKind::RightBrace) {
@@ -1002,7 +971,7 @@ impl Parser {
                 }
             }
         }
-
+        
         self.eat(TokenKind::RightBrace);
         fields
     }
