@@ -95,7 +95,11 @@ impl ModuleCache {
         )))
     }
 
-    pub fn load_module(&mut self, module_path: &[String], run: bool) -> Result<Module, RuntimeError> {
+    pub fn load_module(
+        &mut self,
+        module_path: &[String],
+        run: bool,
+    ) -> Result<Module, RuntimeError> {
         let file_path = self.resolve_module_path(module_path)?;
 
         if let Some(module) = self.modules.get(&file_path) {
@@ -124,31 +128,31 @@ impl ModuleCache {
         let mut parser = Parser::new(lexer);
         let program = parser.parse_program();
         if !run {
-        let exports = self.extract_exports(&program)?;
+            let exports = self.extract_exports(&program)?;
 
-        let module = Module {
-            path: file_path.clone(),
-            exports,
-            initialized: true,
-        };
+            let module = Module {
+                path: file_path.clone(),
+                exports,
+                initialized: true,
+            };
 
-        self.modules.insert(file_path.clone(), module.clone());
-        self.loading_stack.pop();
+            self.modules.insert(file_path.clone(), module.clone());
+            self.loading_stack.pop();
 
-        Ok(module)
+            Ok(module)
         } else {
-        let exports = self.extract_exports(&program)?;
+            let exports = self.extract_exports(&program)?;
 
-        let module = Module {
-            path: file_path.clone(),
-            exports,
-            initialized: true,
-        };
+            let module = Module {
+                path: file_path.clone(),
+                exports,
+                initialized: true,
+            };
 
-        self.modules.insert(file_path.clone(), module.clone());
-        self.loading_stack.pop();
+            self.modules.insert(file_path.clone(), module.clone());
+            self.loading_stack.pop();
 
-        Ok(module)
+            Ok(module)
         }
     }
 

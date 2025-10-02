@@ -215,13 +215,9 @@ impl Interpreter {
                 Ok(result)
             }
 
-            StmtKind::Load { path, alias } => {
-                self.handle_load(path, alias, false)
-            }
+            StmtKind::Load { path, alias } => self.handle_load(path, alias, false),
 
-            StmtKind::LoadAndRun { path, alias } => {
-                self.handle_load(path, alias, true)
-            }
+            StmtKind::LoadAndRun { path, alias } => self.handle_load(path, alias, true),
 
             StmtKind::ExportDecl { decl } => self.interpret_statement(decl),
         }
@@ -593,7 +589,12 @@ impl Interpreter {
         }
     }
 
-    fn handle_load(&mut self, path: &Vec<String>, alias: &Option<String>, run: bool) -> Result<ControlFlow, RuntimeError> {
+    fn handle_load(
+        &mut self,
+        path: &Vec<String>,
+        alias: &Option<String>,
+        run: bool,
+    ) -> Result<ControlFlow, RuntimeError> {
         let module = if run {
             self.module_cache.load_module(path, true)?
         } else {
