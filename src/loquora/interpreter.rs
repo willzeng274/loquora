@@ -595,11 +595,7 @@ impl Interpreter {
         alias: &Option<String>,
         run: bool,
     ) -> Result<ControlFlow, RuntimeError> {
-        let module = if run {
-            self.module_cache.load_module(path, true)?
-        } else {
-            self.module_cache.load_module(path, false)?
-        };
+        let module = self.module_cache.load_module(path, run)?;
 
         if let Some(prefix) = alias {
             let module_value = Value::Module {

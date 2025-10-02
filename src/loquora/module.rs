@@ -1,5 +1,6 @@
 use crate::loquora::ast::*;
 use crate::loquora::environment::{ToolDef, TypeDef};
+use crate::loquora::interpreter::Interpreter;
 use crate::loquora::lexer::Lexer;
 use crate::loquora::parser::Parser;
 use crate::loquora::value::RuntimeError;
@@ -127,33 +128,31 @@ impl ModuleCache {
         let lexer = Lexer::new(source);
         let mut parser = Parser::new(lexer);
         let program = parser.parse_program();
-        if !run {
-            let exports = self.extract_exports(&program)?;
 
-            let module = Module {
-                path: file_path.clone(),
-                exports,
-                initialized: true,
-            };
-
-            self.modules.insert(file_path.clone(), module.clone());
-            self.loading_stack.pop();
-
-            Ok(module)
-        } else {
-            let exports = self.extract_exports(&program)?;
-
-            let module = Module {
-                path: file_path.clone(),
-                exports,
-                initialized: true,
-            };
-
-            self.modules.insert(file_path.clone(), module.clone());
-            self.loading_stack.pop();
-
-            Ok(module)
+        if run {
+            let mut interpreter = Interpreter::new();
+            match interpreter.interpret_program(&program) {
+                Ok(result) => println!("Result for file path {}: {}", file_path.display(), result),
+                Err(error) => eprintln!(
+                    "Runtime Error for file path {}: {}",
+                    file_path.display(),
+                    error
+                ),
+            }
         }
+
+        let exports = self.extract_exports(&program)?;
+
+        let module = Module {
+            path: file_path.clone(),
+            exports,
+            initialized: true,
+        };
+
+        self.modules.insert(file_path.clone(), module.clone());
+        self.loading_stack.pop();
+
+        Ok(module)
     }
 
     fn extract_exports(&mut self, program: &Program) -> Result<ModuleExports, RuntimeError> {

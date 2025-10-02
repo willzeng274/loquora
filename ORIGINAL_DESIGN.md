@@ -1,3 +1,5 @@
+# THIS IS NOW OUTDATED, I WILL REWRITE THIS SOON
+
 https://matthijsgroen.github.io/ebnf2railroad/try-yourself.html
 
 # Loquora Programming Language
