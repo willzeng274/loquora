@@ -1,0 +1,14 @@
+load math_utils;
+
+point = Point {
+    x: 10,
+    y: 20,
+};
+
+print(point);
+
+result1 = add(5, 3);
+print("5 + 3 =", result1);
+
+result2 = multiply(4, 7);
+print("4 * 7 =", result2);

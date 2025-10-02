@@ -114,12 +114,10 @@ impl Lexer {
         let end = self.index;
         let slice = &self.input[start..end];
         let kind = match slice {
-            "import" => TokenKind::Import,
-            "from" => TokenKind::From,
+            "load" => TokenKind::Load,
+            "load_and_run" => TokenKind::LoadAndRun,
             "export" => TokenKind::Export,
-            "schema" => TokenKind::Schema,
             "template" => TokenKind::Template,
-            "model" => TokenKind::Model,
             "struct" => TokenKind::Struct,
             "tool" => TokenKind::Tool,
             "if" => TokenKind::If,
@@ -127,6 +125,7 @@ impl Lexer {
             "elif" => TokenKind::Elif,
             "while" => TokenKind::While,
             "for" => TokenKind::For,
+            "in" => TokenKind::In,
             "loop" => TokenKind::Loop,
             "with" => TokenKind::With,
             "as" => TokenKind::As,

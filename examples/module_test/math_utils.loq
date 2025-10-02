@@ -1,0 +1,16 @@
+export struct Point {
+    x: Int,
+    y: Int,
+}
+
+export tool add(a: Int, b: Int) -> Int {
+    return a + b;
+}
+
+export tool multiply(a: Int, b: Int) -> Int {
+    return a * b;
+}
+
+tool internal_helper() -> String {
+    return "This is not exported";
+}

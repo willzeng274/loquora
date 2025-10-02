@@ -1,5 +1,0 @@
-schema CombatResult:
-    outcome: str  // "victory", "defeat", "escape"
-    damage_dealt: int
-    damage_received: int
-    loot: vec[InventoryItem]?

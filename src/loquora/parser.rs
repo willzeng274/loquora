@@ -49,23 +49,17 @@ impl Parser {
     }
 
     fn parse_top_level(&mut self) -> Stmt {
-        if self.at(TokenKind::Import) {
-            return self.parse_import_stmt();
+        if self.at(TokenKind::Load) {
+            return self.parse_load_stmt();
         }
-        if self.at(TokenKind::From) {
-            return self.parse_import_from_stmt();
+        if self.at(TokenKind::LoadAndRun) {
+            return self.parse_load_and_run_stmt();
         }
         if self.at(TokenKind::Export) {
-            return self.parse_export_stmt();
-        }
-        if self.at(TokenKind::Schema) {
-            return self.parse_schema_decl();
+            return self.parse_export_decl();
         }
         if self.at(TokenKind::Template) {
             return self.parse_template_decl();
-        }
-        if self.at(TokenKind::Model) {
-            return self.parse_model_decl();
         }
         if self.at(TokenKind::Struct) {
             return self.parse_struct_decl();
@@ -76,118 +70,114 @@ impl Parser {
         self.parse_statement()
     }
 
-    fn parse_module_path(&mut self) -> (Vec<String>, Span) {
-        // module_path = identifier , { "." , identifier } ;
-        let mut parts: Vec<String> = Vec::new();
-        let start = self.current.span.start;
-        let mut end = start;
-        loop {
-            if let TokenKind::Identifier = self.current.kind {
-                let text = self.slice_current();
-                parts.push(text.to_string());
-                end = self.current.span.end;
-                self.advance();
-            } else {
-                break;
-            }
-            if self.at(TokenKind::Dot) {
-                self.advance();
-                continue;
-            } else {
-                break;
-            }
-        }
-        (parts, start..end)
-    }
-
     fn slice_current<'a>(&'a self) -> &'a str {
         &self.input[self.current.span.clone()]
     }
 
-    fn parse_import_list(&mut self) -> Vec<ImportItem> {
-        let mut items = Vec::new();
-        loop {
-            let item = match self.current.kind {
-                TokenKind::Identifier => {
-                    let name = self.slice_current().to_string();
-                    self.advance();
-                    ImportItem::Identifier(name)
-                }
-                TokenKind::String => {
-                    let value = self.slice_current().trim_matches('"').to_string();
-                    self.advance();
-                    ImportItem::String(value)
-                }
-                _ => break,
-            };
-            items.push(item);
-            if self.at(TokenKind::Comma) {
+    fn parse_load_stmt(&mut self) -> Stmt {
+        let start = self.current.span.start;
+        self.eat(TokenKind::Load);
+
+        let mut path = Vec::new();
+        if let TokenKind::Identifier = self.current.kind {
+            path.push(self.slice_current().to_string());
+            self.advance();
+        } else {
+            panic!("Expected module path after load");
+        }
+
+        while self.at(TokenKind::Divide) {
+            self.advance();
+            if let TokenKind::Identifier = self.current.kind {
+                path.push(self.slice_current().to_string());
                 self.advance();
-                continue;
             } else {
-                break;
+                panic!("Expected identifier after /");
             }
         }
-        items
-    }
 
-    fn parse_import_stmt(&mut self) -> Stmt {
-        let start = self.current.span.start;
-        self.eat(TokenKind::Import);
-        let (module, span_mod) = self.parse_module_path();
-        self.eat(TokenKind::Semicolon);
-        Spanned::new(StmtKind::ImportModule { module }, start..span_mod.end + 1)
-    }
-
-    fn parse_import_from_stmt(&mut self) -> Stmt {
-        let start = self.current.span.start;
-        self.eat(TokenKind::From);
-        let (module, _span_mod) = self.parse_module_path();
-        self.eat(TokenKind::Import);
-        self.eat(TokenKind::LeftParen);
-        let items = self.parse_import_list();
-        self.eat(TokenKind::RightParen);
-        self.eat(TokenKind::Semicolon);
-        let end = self.current.span.start;
-        Spanned::new(StmtKind::ImportFrom { module, items }, start..end)
-    }
-
-    fn parse_export_list(&mut self) -> Vec<ExportItem> {
-        let mut items = Vec::new();
-        loop {
-            let item = match self.current.kind {
-                TokenKind::Identifier => {
-                    let name = self.slice_current().to_string();
-                    self.advance();
-                    ExportItem::Identifier(name)
-                }
-                TokenKind::String => {
-                    let value = self.slice_current().trim_matches('"').to_string();
-                    self.advance();
-                    ExportItem::String(value)
-                }
-                _ => break,
-            };
-            items.push(item);
-            if self.at(TokenKind::Comma) {
+        let alias = if self.at(TokenKind::As) {
+            self.advance();
+            if let TokenKind::Identifier = self.current.kind {
+                let a = self.slice_current().to_string();
                 self.advance();
-                continue;
+                Some(a)
             } else {
-                break;
+                panic!("Expected alias identifier");
+            }
+        } else {
+            None
+        };
+
+        self.eat(TokenKind::Semicolon);
+        Spanned::new(
+            StmtKind::Load { path, alias },
+            start..self.current.span.start,
+        )
+    }
+
+    fn parse_load_and_run_stmt(&mut self) -> Stmt {
+        let start = self.current.span.start;
+        self.eat(TokenKind::LoadAndRun);
+
+        let mut path = Vec::new();
+        if let TokenKind::Identifier = self.current.kind {
+            path.push(self.slice_current().to_string());
+            self.advance();
+        } else {
+            panic!("Expected module path after load");
+        }
+
+        while self.at(TokenKind::Divide) {
+            self.advance();
+            if let TokenKind::Identifier = self.current.kind {
+                path.push(self.slice_current().to_string());
+                self.advance();
+            } else {
+                panic!("Expected identifier after /");
             }
         }
-        items
+
+        let alias = if self.at(TokenKind::As) {
+            self.advance();
+            if let TokenKind::Identifier = self.current.kind {
+                let a = self.slice_current().to_string();
+                self.advance();
+                Some(a)
+            } else {
+                panic!("Expected alias identifier");
+            }
+        } else {
+            None
+        };
+
+        self.eat(TokenKind::Semicolon);
+        Spanned::new(
+            StmtKind::LoadAndRun { path, alias },
+            start..self.current.span.start,
+        )
     }
 
-    fn parse_export_stmt(&mut self) -> Stmt {
+    fn parse_export_decl(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Export);
-        self.eat(TokenKind::LeftParen);
-        let items = self.parse_export_list();
-        self.eat(TokenKind::RightParen);
-        self.eat(TokenKind::Semicolon);
-        let end = self.current.span.start;
-        Spanned::new(StmtKind::Export { items }, start..end)
+
+        let decl = if self.at(TokenKind::Struct) {
+            self.parse_struct_decl()
+        } else if self.at(TokenKind::Tool) {
+            self.parse_tool_decl()
+        } else if self.at(TokenKind::Template) {
+            self.parse_template_decl()
+        } else {
+            panic!("Expected struct, tool, or template after export");
+        };
+
+        Spanned::new(
+            StmtKind::ExportDecl {
+                decl: Box::new(decl),
+            },
+            start..self.current.span.start,
+        )
     }
 
     fn is_assignment_start(&mut self) -> bool {
@@ -384,37 +374,22 @@ impl Parser {
     fn parse_for_stmt(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::For);
-        self.eat(TokenKind::LeftParen);
-        let init = if self.is_assignment_start() {
-            Some(self.parse_assignment_pair())
+        let var = if let TokenKind::Identifier = self.current.kind {
+            let v = self.slice_current().to_string();
+            self.advance();
+            v
         } else {
-            None
+            panic!("Expected identifier after for");
         };
-        self.eat(TokenKind::Semicolon);
-        let cond = if !self.at(TokenKind::Semicolon) {
-            Some(self.parse_expression())
-        } else {
-            None
-        };
-        self.eat(TokenKind::Semicolon);
-        let step = if !self.at(TokenKind::RightParen) {
-            Some(self.parse_expression())
-        } else {
-            None
-        };
-        self.eat(TokenKind::RightParen);
+        self.eat(TokenKind::In);
+        let iter = self.parse_expression();
         self.eat(TokenKind::LeftBrace);
         self.in_loop += 1;
         let body = self.parse_loop_body_until();
         self.in_loop -= 1;
         self.eat(TokenKind::RightBrace);
         Spanned::new(
-            StmtKind::For {
-                init,
-                cond,
-                step,
-                body,
-            },
+            StmtKind::For { var, iter, body },
             start..self.current.span.start,
         )
     }
@@ -546,60 +521,6 @@ impl Parser {
         params
     }
 
-    fn parse_schema_decl(&mut self) -> Stmt {
-        let start = self.current.span.start;
-        self.eat(TokenKind::Schema);
-        let name = match self.current.kind {
-            TokenKind::Identifier => {
-                let s = self.slice_current().to_string();
-                self.advance();
-                s
-            }
-            _ => panic!("schema name expected"),
-        };
-        self.eat(TokenKind::LeftBrace);
-        let mut fields: Vec<SchemaField> = Vec::new();
-        while !self.at(TokenKind::RightBrace) {
-            let fname = match self.current.kind {
-                TokenKind::Identifier => {
-                    let s = self.slice_current().to_string();
-                    self.advance();
-                    s
-                }
-                _ => panic!("field name expected"),
-            };
-            self.eat(TokenKind::Colon);
-            let ty = self.parse_type_expr();
-            let suffix = if self.at(TokenKind::Question) {
-                self.advance();
-                if self.at(TokenKind::LogicalNot) {
-                    self.advance();
-                    Some("?!".to_string())
-                } else {
-                    Some("?".to_string())
-                }
-            } else if self.at(TokenKind::LogicalNot) {
-                self.advance();
-                Some("!".to_string())
-            } else {
-                None
-            };
-            if self.at(TokenKind::Comma) {
-                self.advance();
-            }
-            fields.push(SchemaField {
-                name: fname,
-                ty,
-                suffix,
-            });
-        }
-        self.eat(TokenKind::RightBrace);
-        Spanned::new(
-            StmtKind::SchemaDecl { name, fields },
-            start..self.current.span.start,
-        )
-    }
-
     fn parse_template_decl(&mut self) -> Stmt {
         let start = self.current.span.start;
         self.eat(TokenKind::Template);
@@ -632,63 +553,6 @@ impl Parser {
         self.eat(TokenKind::Semicolon);
         Spanned::new(
             StmtKind::TemplateDecl { name, params, body },
-            start..self.current.span.start,
-        )
-    }
-
-    fn parse_model_decl(&mut self) -> Stmt {
-        let start = self.current.span.start;
-        self.eat(TokenKind::Model);
-        let name = match self.current.kind {
-            TokenKind::Identifier => {
-                let s = self.slice_current().to_string();
-                self.advance();
-                s
-            }
-            _ => panic!("model name expected"),
-        };
-        let base = if self.at(TokenKind::LeftParen) {
-            self.eat(TokenKind::LeftParen);
-            let b = match self.current.kind {
-                TokenKind::Identifier => {
-                    let s = self.slice_current().to_string();
-                    self.advance();
-                    s
-                }
-                _ => panic!("base model expected"),
-            };
-            self.eat(TokenKind::RightParen);
-            Some(b)
-        } else {
-            None
-        };
-        self.eat(TokenKind::LeftBrace);
-        let mut members: Vec<ModelMember> = Vec::new();
-        while !self.at(TokenKind::RightBrace) {
-            if self.at(TokenKind::Tool) {
-                let (n, p, r, b) = self.parse_tool_decl_inner();
-                members.push(ModelMember::ToolDecl {
-                    name: n,
-                    params: p,
-                    return_type: r,
-                    body: b,
-                });
-                self.eat(TokenKind::Semicolon);
-            } else {
-                let (target, _) = self.parse_assignable_path();
-                self.eat(TokenKind::Assign);
-                let value = self.parse_expression();
-                self.eat(TokenKind::Semicolon);
-                members.push(ModelMember::Assignment { target, value });
-            }
-        }
-        self.eat(TokenKind::RightBrace);
-        Spanned::new(
-            StmtKind::ModelDecl {
-                name,
-                base,
-                members,
-            },
             start..self.current.span.start,
         )
     }
@@ -744,7 +608,7 @@ impl Parser {
                 if self.at(TokenKind::Comma) {
                     self.advance();
                 }
-                members.push(StructMember::SchemaField(SchemaField {
+                members.push(StructMember::Field(StructField {
                     name: fname,
                     ty,
                     suffix,
@@ -799,13 +663,6 @@ impl Parser {
         self.in_tool = was_in_tool;
         self.eat(TokenKind::RightBrace);
         (name, params, ret, body)
-    }
-
-    fn parse_assignment_pair(&mut self) -> (Vec<String>, Expr) {
-        let (lhs, _) = self.parse_assignable_path();
-        self.eat(TokenKind::Assign);
-        let rhs = self.parse_expression();
-        (lhs, rhs)
     }
 
     fn parse_logical_or(&mut self) -> Expr {
@@ -932,6 +789,41 @@ impl Parser {
                     }
                     _ => panic!("property expected"),
                 };
+
+                if self.at(TokenKind::LeftBrace) {
+                    let mut peek_lexer = self.lexer.clone();
+                    let next_after_brace = peek_lexer.next_token();
+                    let is_object_init = match next_after_brace.kind {
+                        TokenKind::RightBrace => true,
+                        TokenKind::Identifier => {
+                            let token_after_id = peek_lexer.next_token();
+                            matches!(token_after_id.kind, TokenKind::Colon)
+                        }
+                        _ => false,
+                    };
+
+                    if is_object_init {
+                        let type_expr = Spanned::new(
+                            ExprKind::Property {
+                                object: Box::new(node.clone()),
+                                property: name,
+                            },
+                            node.span.start..self.current.span.start,
+                        );
+                        let fields = self.parse_field_init_list();
+                        let start = node.span.start;
+                        let end = self.current.span.start;
+                        node = Spanned::new(
+                            ExprKind::ObjectInit {
+                                type_expr: Box::new(type_expr),
+                                fields,
+                            },
+                            start..end,
+                        );
+                        continue;
+                    }
+                }
+
                 let start = node.span.start;
                 let end = self.current.span.start;
                 node = Spanned::new(
@@ -982,9 +874,29 @@ impl Parser {
                 self.advance();
 
                 if self.at(TokenKind::LeftBrace) {
-                    let fields = self.parse_field_init_list();
-                    let end = self.current.span.start; // After eating the RightBrace
-                    Spanned::new(ExprKind::ObjectInit { type_name: s, fields }, start..end)
+                    let mut peek_lexer = self.lexer.clone();
+                    let next_after_brace = peek_lexer.next_token();
+                    let is_object_init = match next_after_brace.kind {
+                        TokenKind::RightBrace => true,
+                        TokenKind::Identifier => {
+                            let token_after_id = peek_lexer.next_token();
+                            matches!(token_after_id.kind, TokenKind::Colon)
+                        }
+                        _ => false,
+                    };
+
+                    if is_object_init {
+                        let type_expr = Box::new(Spanned::new(
+                            ExprKind::Identifier(s.clone()),
+                            start..self.current.span.start,
+                        ));
+                        let fields = self.parse_field_init_list();
+                        let end = self.current.span.start;
+                        Spanned::new(ExprKind::ObjectInit { type_expr, fields }, start..end)
+                    } else {
+                        let end = self.current.span.start;
+                        Spanned::new(ExprKind::Identifier(s), start..end)
+                    }
                 } else {
                     let end = self.current.span.start;
                     Spanned::new(ExprKind::Identifier(s), start..end)
@@ -1051,7 +963,10 @@ impl Parser {
                 self.eat(TokenKind::RightParen);
                 e
             }
-            _ => panic!("primary expected, found {:?} at span {:?}", self.current.kind, self.current.span),
+            _ => panic!(
+                "primary expected, found {:?} at span {:?}",
+                self.current.kind, self.current.span
+            ),
         }
     }
 
@@ -1079,6 +994,9 @@ impl Parser {
 
                 if self.at(TokenKind::Comma) {
                     self.advance();
+                    if self.at(TokenKind::RightBrace) {
+                        break;
+                    }
                 } else {
                     break;
                 }

@@ -1,0 +1,9 @@
+load_and_run test_load;
+
+load_and_run test_load_alias;
+
+load_and_run test_nested;
+
+load_and_run test_nested_direct;
+
+internal_helper();

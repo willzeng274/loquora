@@ -1,0 +1,17 @@
+export struct Config {
+    name: String,
+    value: Int,
+}
+
+export tool bar(message: String) -> String {
+    print(message);
+    return message;
+}
+
+tool helper() {
+    print("This is a private helper");
+}
+
+result = bar("This is the bar function");
+helper();
+print("Import/export example completed");

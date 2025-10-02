@@ -1,0 +1,14 @@
+load math_utils as math;
+
+point = math.Point {
+    x: 10,
+    y: 20,
+};
+
+print(point);
+
+result1 = math.add(5, 3);
+print("5 + 3 =", result1);
+
+result2 = math.multiply(4, 7);
+print("4 * 7 =", result2);

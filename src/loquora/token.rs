@@ -17,12 +17,10 @@ pub enum TokenKind {
     Identifier,
 
     // Keywords
-    Import,
-    From,
+    Load,
+    LoadAndRun,
     Export,
-    Schema,
     Template,
-    Model,
     Struct,
     Tool,
     If,
@@ -30,6 +28,7 @@ pub enum TokenKind {
     Elif,
     While,
     For,
+    In,
     Loop,
     With,
     As,

@@ -50,7 +50,7 @@ pub enum ExprKind {
         property: String,
     },
     ObjectInit {
-        type_name: String,
+        type_expr: Box<Expr>,
         fields: Vec<FieldInit>,
     },
 }
@@ -66,18 +66,6 @@ pub enum TypeExprKind {
 pub type TypeExpr = Spanned<TypeExprKind>;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ImportItem {
-    Identifier(String),
-    String(String),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ExportItem {
-    Identifier(String),
-    String(String),
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct ParamDecl {
     pub name: String,
     pub ty: TypeExpr,
@@ -85,19 +73,16 @@ pub struct ParamDecl {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StmtKind {
-    ImportModule {
-        module: Vec<String>,
+    Load {
+        path: Vec<String>,
+        alias: Option<String>,
     },
-    ImportFrom {
-        module: Vec<String>,
-        items: Vec<ImportItem>,
+    LoadAndRun {
+        path: Vec<String>,
+        alias: Option<String>,
     },
-    Export {
-        items: Vec<ExportItem>,
-    },
-    SchemaDecl {
-        name: String,
-        fields: Vec<SchemaField>,
+    ExportDecl {
+        decl: Box<Stmt>,
     },
     StructDecl {
         name: String,
@@ -107,11 +92,6 @@ pub enum StmtKind {
         name: String,
         params: Vec<ParamDecl>,
         body: String,
-    },
-    ModelDecl {
-        name: String,
-        base: Option<String>,
-        members: Vec<ModelMember>,
     },
     ToolDecl {
         name: String,
@@ -142,9 +122,8 @@ pub enum StmtKind {
         body: Vec<Stmt>,
     },
     For {
-        init: Option<(Vec<String>, Expr)>,
-        cond: Option<Expr>,
-        step: Option<Expr>,
+        var: String,
+        iter: Expr,
         body: Vec<Stmt>,
     },
     Return {
@@ -155,7 +134,7 @@ pub enum StmtKind {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SchemaField {
+pub struct StructField {
     pub name: String,
     pub ty: TypeExpr,
     pub suffix: Option<String>, // ?, !, or ?!
@@ -163,26 +142,12 @@ pub struct SchemaField {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StructMember {
-    SchemaField(SchemaField),
+    Field(StructField),
     ToolDecl {
         name: String,
         params: Vec<ParamDecl>,
         return_type: Option<TypeExpr>,
         body: Vec<Stmt>,
-    },
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ModelMember {
-    ToolDecl {
-        name: String,
-        params: Vec<ParamDecl>,
-        return_type: Option<TypeExpr>,
-        body: Vec<Stmt>,
-    },
-    Assignment {
-        target: Vec<String>,
-        value: Expr,
     },
 }
 

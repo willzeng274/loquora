@@ -1,6 +1,7 @@
+use crate::loquora::ast::{ParamDecl, Stmt};
+use crate::loquora::environment::{ToolDef, TypeDef};
 use std::collections::HashMap;
 use std::fmt;
-use crate::loquora::ast::{ParamDecl, Stmt};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
@@ -19,7 +20,13 @@ pub enum Value {
         params: Vec<ParamDecl>,
         body: Vec<Stmt>,
     },
+    TypeRef(TypeDef),
     List(Vec<Value>),
+    Module {
+        tools: HashMap<String, ToolDef>,
+        structs: HashMap<String, TypeDef>,
+        templates: HashMap<String, TypeDef>,
+    },
 }
 
 impl fmt::Display for Value {
@@ -44,6 +51,10 @@ impl fmt::Display for Value {
                 write!(f, " }}")
             }
             Value::ToolRef { name, .. } => write!(f, "tool<{}>", name),
+            Value::TypeRef(type_def) => match type_def {
+                TypeDef::Struct { name, .. } => write!(f, "type<{}>", name),
+                TypeDef::Template { name, .. } => write!(f, "template<{}>", name),
+            },
             Value::List(items) => {
                 write!(f, "[")?;
                 let mut first = true;
@@ -56,6 +67,19 @@ impl fmt::Display for Value {
                 }
                 write!(f, "]")
             }
+            Value::Module {
+                tools,
+                structs,
+                templates,
+            } => {
+                write!(
+                    f,
+                    "module<{} tools, {} structs, {} templates>",
+                    tools.len(),
+                    structs.len(),
+                    templates.len()
+                )
+            }
         }
     }
 }
@@ -64,11 +88,7 @@ impl fmt::Display for Value {
 pub enum RuntimeError {
     UndefinedVariable(String),
     UndefinedTool(String),
-    UndefinedType(String),
-    TypeMismatch {
-        expected: String,
-        actual: String,
-    },
+    TypeMismatch { expected: String, actual: String },
     FieldNotFound(String),
     RequiredFieldMissing(String),
     NotAnObject,
@@ -87,7 +107,6 @@ impl fmt::Display for RuntimeError {
         match self {
             RuntimeError::UndefinedVariable(name) => write!(f, "Undefined variable: {}", name),
             RuntimeError::UndefinedTool(name) => write!(f, "Undefined tool: {}", name),
-            RuntimeError::UndefinedType(name) => write!(f, "Undefined type: {}", name),
             RuntimeError::TypeMismatch { expected, actual } => {
                 write!(f, "Type mismatch: expected {}, got {}", expected, actual)
             }
@@ -119,6 +138,25 @@ impl Value {
                 .get(name)
                 .cloned()
                 .ok_or_else(|| RuntimeError::FieldNotFound(name.to_string())),
+            Value::Module {
+                tools,
+                structs,
+                templates,
+            } => {
+                if let Some(tool) = tools.get(name) {
+                    Ok(Value::ToolRef {
+                        name: tool.name.clone(),
+                        params: tool.params.clone(),
+                        body: tool.body.clone(),
+                    })
+                } else if let Some(struct_def) = structs.get(name) {
+                    Ok(Value::TypeRef(struct_def.clone()))
+                } else if let Some(template_def) = templates.get(name) {
+                    Ok(Value::TypeRef(template_def.clone()))
+                } else {
+                    Err(RuntimeError::FieldNotFound(name.to_string()))
+                }
+            }
             _ => Err(RuntimeError::NotAnObject),
         }
     }
@@ -147,7 +185,9 @@ impl Value {
             Value::Null => "Null",
             Value::Object { .. } => "Object",
             Value::ToolRef { .. } => "Tool",
+            Value::TypeRef(_) => "Type",
             Value::List(_) => "List",
+            Value::Module { .. } => "Module",
         }
     }
 
@@ -167,8 +207,15 @@ impl Value {
         match self {
             Value::Int(n) => Ok(*n),
             Value::Float(f) => Ok(*f as i64),
+            Value::Bool(true) => Ok(1),
+            Value::Bool(false) => Ok(0),
+            Value::Char(c) => Ok(*c as i64),
+            Value::String(s) => s.parse::<i64>().map_err(|_| RuntimeError::TypeMismatch {
+                expected: "Int or numeric string".to_string(),
+                actual: format!("String(\"{}\")", s),
+            }),
             _ => Err(RuntimeError::TypeMismatch {
-                expected: "Int".to_string(),
+                expected: "Int-convertible type".to_string(),
                 actual: self.type_name().to_string(),
             }),
         }
@@ -178,14 +225,24 @@ impl Value {
         match self {
             Value::Int(n) => Ok(*n as f64),
             Value::Float(f) => Ok(*f),
+            Value::Bool(true) => Ok(1.0),
+            Value::Bool(false) => Ok(0.0),
+            Value::String(s) => s.parse::<f64>().map_err(|_| RuntimeError::TypeMismatch {
+                expected: "Float or numeric string".to_string(),
+                actual: format!("String(\"{}\")", s),
+            }),
             _ => Err(RuntimeError::TypeMismatch {
-                expected: "Float".to_string(),
+                expected: "Float-convertible type".to_string(),
                 actual: self.type_name().to_string(),
             }),
         }
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_bool(&self) -> bool {
+        self.is_truthy()
+    }
+
+    pub fn as_string(&self) -> String {
         match self {
             Value::String(s) => s.clone(),
             _ => format!("{}", self),

@@ -1,0 +1,14 @@
+load geometry/shapes as geo;
+load utils/string/helpers as str1;
+
+rect = geo.Rectangle { width: 10, height: 5 };
+circle = geo.Circle { radius: 7 };
+
+print("Rectangle area:", geo.area_rect(rect));
+print("Circle area:", geo.area_circle(circle));
+
+s1 = str1.concat("Hello", " World");
+print("Concatenated:", s1);
+
+s2 = str1.repeat("Hi! ", 3);
+print("Repeated:", s2);

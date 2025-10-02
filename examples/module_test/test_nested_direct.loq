@@ -1,0 +1,14 @@
+load geometry/shapes;
+load utils/string/helpers;
+
+rect = Rectangle { width: 8, height: 4 };
+circle = Circle { radius: 5 };
+
+print("Rectangle area:", area_rect(rect));
+print("Circle area:", area_circle(circle));
+
+s1 = concat("Foo", "Bar");
+print("Direct concat:", s1);
+
+s2 = repeat("*", 5);
+print("Direct repeat:", s2);

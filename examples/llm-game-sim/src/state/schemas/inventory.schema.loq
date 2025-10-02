@@ -1,4 +1,0 @@
-schema InventoryItem:
-    name: str
-    quantity: int
-    attributes: map[str, str]?

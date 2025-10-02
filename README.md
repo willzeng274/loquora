@@ -1,14 +1,36 @@
 # Loquora Programming Language
 
-A functional-inspired programming language designed for AI/LLM-first development, featuring context-sensitive keywords, quaternary operators, and schema-driven development.
+~~A functional-inspired programming language designed for AI/LLM-first development, featuring context-sensitive keywords, quaternary operators, and schema-driven development.~~
+
+A concurrent, multi-model programming language designed for synthetic data generation, benchmarking, and evaluation at scale.
+
+Loquora helps orchestrate complex AI conversations, generate high-quality synthetic datasets, and evaluate model performance across multiple providers—all in a type-safe, composable language.
+
+## Planned Features
+
+### Synthetic Data Generation
+- Parallel dataset creation
+- Multi-model orchestration
+- Schema-driven generation
+- Conversation simulation
+
+### Evaluation & Benchmarking
+- Multi-provider evaluation
+- Custom metrics (still designing this)
+- Analysis
+- A/B testing
+
+### Concurrency & Scale
+- Async-first
+- Rate limiting
+- Streaming support
+- Batch processing
 
 ## File Extensions (tooling not yet implemented)
 - `.loq` - Main source files
-- `.model.loq` - AI model definitions
-- `.schema.loq` - Schema definitions
 
 ## CLI Tools (not yet implemented)
-- `loq` (pronounced "lock") - Main CLI
+- `loq` (pronounced "lock") - Main CLI and interpreter
 - `loqi` (pronounced "low-key") - Package manager
 - `loqi.toml` - Package configuration file
 
@@ -18,7 +40,9 @@ A functional-inspired programming language designed for AI/LLM-first development
 
 ## Current Status
 
-The Loquora lexer and parser are currently implemented, and right now the language can be tokenized and parsed into an Abstract Syntax Tree (AST). The `cargo run` command provides a REPL that echoes the parsed AST, and it can also read and parse single `.loq` files provided as arguments. Full language functionality, including interpretation and execution, is under active development.
+The Loquora lexer and parser are currently implemented with a basic interpreter. The language can be tokenized, parsed into an Abstract Syntax Tree (AST), and execute simple expressions. The `cargo run` command provides a REPL for interactive development.
+
+**Not yet implemented:** LLM integration, concurrent execution, synthetic data generation, evaluation frameworks, multi-model orchestration.
 
 ## REPL Usage
 

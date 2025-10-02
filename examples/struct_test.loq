@@ -1,6 +1,6 @@
 // ! = required, ? = nullable, ?! = nullable and optional
 
-schema Person {
+struct Person {
     id: Int!,
     name: String?,
     age: Int!,
@@ -12,11 +12,6 @@ struct Address {
     city: String,
     zip_code: String,
     person: Person!,
-}
-
-model PremiumUser(Person) {
-    status = "gold";
-    tier = 1;
 }
 
 john = Person {
@@ -32,13 +27,6 @@ address = Address {
     zip_code: "12345",
     person: john
 };
-
-test = PremiumUser {
-    status: "gold",
-    tier: 1
-};
-
-print(test);
 
 print("John", john);
 

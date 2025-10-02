@@ -1,8 +1,0 @@
-<<~PROMPT
-Simulate combat:
-Player: #{player.name} (#{player.health} HP)
-Enemy: #{enemy.name} (#{enemy.health} HP)
-Environment: #{world.environment}
-
-Return JSON matching schema CombatResult.
-PROMPT

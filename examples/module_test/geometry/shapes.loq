@@ -1,0 +1,16 @@
+export struct Rectangle {
+    width: int,
+    height: int,
+}
+
+export struct Circle {
+    radius: int,
+}
+
+export tool area_rect(r: Rectangle) -> int {
+    return r.width * r.height;
+}
+
+export tool area_circle(c: Circle) -> int {
+    return 3 * c.radius * c.radius;
+}

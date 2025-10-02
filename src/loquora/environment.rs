@@ -1,21 +1,12 @@
+use crate::loquora::ast::{ParamDecl, Stmt, StructMember};
+use crate::loquora::value::{RuntimeError, Value};
 use std::collections::HashMap;
-use crate::loquora::value::{Value, RuntimeError};
-use crate::loquora::ast::{SchemaField, StructMember, ModelMember, ParamDecl, Stmt};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeDef {
-    Schema {
-        name: String,
-        fields: Vec<SchemaField>,
-    },
     Struct {
         name: String,
         members: Vec<StructMember>,
-    },
-    Model {
-        name: String,
-        base: Option<String>,
-        members: Vec<ModelMember>,
     },
     Template {
         name: String,
@@ -24,7 +15,7 @@ pub enum TypeDef {
     },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ToolDef {
     pub name: String,
     pub params: Vec<ParamDecl>,
@@ -95,6 +86,26 @@ impl Environment {
                 params: vec![],
                 body: vec![],
             }),
+            "int" => Some(Value::ToolRef {
+                name: "int".to_string(),
+                params: vec![],
+                body: vec![],
+            }),
+            "float" => Some(Value::ToolRef {
+                name: "float".to_string(),
+                params: vec![],
+                body: vec![],
+            }),
+            "bool" => Some(Value::ToolRef {
+                name: "bool".to_string(),
+                params: vec![],
+                body: vec![],
+            }),
+            "str" => Some(Value::ToolRef {
+                name: "str".to_string(),
+                params: vec![],
+                body: vec![],
+            }),
             _ => None,
         };
 
@@ -148,7 +159,12 @@ impl Environment {
         Ok(())
     }
 
-    fn update_nested_object(&self, obj: Value, path: &[String], value: Value) -> Result<Value, RuntimeError> {
+    fn update_nested_object(
+        &self,
+        obj: Value,
+        path: &[String],
+        value: Value,
+    ) -> Result<Value, RuntimeError> {
         if path.is_empty() {
             return Ok(value);
         }
@@ -201,59 +217,50 @@ impl Environment {
     }
 
     pub fn define_tool(&mut self, name: String, params: Vec<ParamDecl>, body: Vec<Stmt>) {
-        self.global_tools.insert(name.clone(), ToolDef { name, params, body });
+        self.global_tools
+            .insert(name.clone(), ToolDef { name, params, body });
     }
 
     pub fn define_type(&mut self, type_def: TypeDef) {
         let name = match &type_def {
-            TypeDef::Schema { name, .. } => name.clone(),
             TypeDef::Struct { name, .. } => name.clone(),
-            TypeDef::Model { name, .. } => name.clone(),
             TypeDef::Template { name, .. } => name.clone(),
         };
         self.type_definitions.insert(name, type_def);
     }
 
-    pub fn create_object(&self, type_name: &str, field_values: HashMap<String, Value>) -> Result<Value, RuntimeError> {
-        let type_def = self.type_definitions.get(type_name)
-            .ok_or_else(|| RuntimeError::UndefinedType(type_name.to_string()))?;
-
-        // validate fields match schema/struct definition
+    pub fn create_object_from_typedef(
+        &self,
+        type_def: &TypeDef,
+        field_values: HashMap<String, Value>,
+    ) -> Result<Value, RuntimeError> {
         self.validate_object_fields(type_def, &field_values)?;
 
+        let type_name = match type_def {
+            TypeDef::Struct { name, .. } => name.clone(),
+            TypeDef::Template { name, .. } => {
+                return Err(RuntimeError::InvalidArguments(format!(
+                    "Cannot instantiate template {}",
+                    name
+                )));
+            }
+        };
+
         Ok(Value::Object {
-            type_name: type_name.to_string(),
+            type_name,
             fields: field_values,
         })
     }
 
-    fn validate_object_fields(&self, type_def: &TypeDef, fields: &HashMap<String, Value>) -> Result<(), RuntimeError> {
+    fn validate_object_fields(
+        &self,
+        type_def: &TypeDef,
+        fields: &HashMap<String, Value>,
+    ) -> Result<(), RuntimeError> {
         match type_def {
-            TypeDef::Schema { fields: schema_fields, .. } => {
-                for schema_field in schema_fields {
-                    let field_name = &schema_field.name;
-                    let is_optional = schema_field.suffix.as_ref().map_or(false, |s| s.contains('?'));
-                    let is_required = schema_field.suffix.as_ref().map_or(true, |s| s.contains('!'));
-
-                    if is_required && !is_optional && !fields.contains_key(field_name) {
-                        return Err(RuntimeError::RequiredFieldMissing(field_name.clone()));
-                    }
-
-                    if let Some(value) = fields.get(field_name) {
-                        let is_nullable = schema_field.suffix.as_ref().map_or(false, |s| s.contains('?'));
-                        if !is_nullable && matches!(value, Value::Null) {
-                            return Err(RuntimeError::TypeMismatch {
-                                expected: "non-null".to_string(),
-                                actual: "null".to_string(),
-                            });
-                        }
-                    }
-                }
-                Ok(())
-            }
             TypeDef::Struct { members, .. } => {
                 for member in members {
-                    if let StructMember::SchemaField(field) = member {
+                    if let StructMember::Field(field) = member {
                         let field_name = &field.name;
                         let is_optional = field.suffix.as_ref().map_or(false, |s| s.contains('?'));
                         let is_required = field.suffix.as_ref().map_or(true, |s| s.contains('!'));
@@ -263,7 +270,8 @@ impl Environment {
                         }
 
                         if let Some(value) = fields.get(field_name) {
-                            let is_nullable = field.suffix.as_ref().map_or(false, |s| s.contains('?'));
+                            let is_nullable =
+                                field.suffix.as_ref().map_or(false, |s| s.contains('?'));
                             if !is_nullable && matches!(value, Value::Null) {
                                 return Err(RuntimeError::TypeMismatch {
                                     expected: "non-null".to_string(),
@@ -275,7 +283,7 @@ impl Environment {
                 }
                 Ok(())
             }
-            _ => Ok(()),
+            TypeDef::Template { .. } => Ok(()),
         }
     }
 }

@@ -5,42 +5,29 @@ program = { statement } ;
 
 (* Statements *)
 statement = declaration_stmt | control_stmt | basic_stmt ;
-declaration_stmt = import_stmt | export_stmt | schema_decl | tool_decl | template_decl | model_decl | struct_decl ;
+declaration_stmt = load_stmt | load_and_run_stmt | export_decl | template_decl | struct_decl | tool_decl ;
+export_decl = "export" , ( struct_decl | tool_decl | template_decl ) ;
 control_stmt = with_stmt | loop_stmt | if_stmt | while_stmt | for_stmt ;
 basic_stmt = assignment | expr_stmt ;
 
-(* Import statements *)
-import_stmt = import_module | import_from ;
-import_module = "import" , module_path , ";" ;
-import_from = "from" , module_path , "import" , "(" , import_list , ")" , ";" ;
+(* Load statements *)
+load_stmt = "load" , module_path , [ "as" , identifier ] , ";" ;
+module_path = identifier , { "/" , identifier } ;
 
-(* Export statements *)
-export_stmt = "export" , "(" , export_items , ")" , ";" ;
-export_items = export_item , { "," , export_item } ;
-export_item = identifier | string_literal ;
-
-module_path = identifier , { "." , identifier } ;
-import_list = import_item , { "," , import_item } ;
-import_item = identifier | string_literal ;
-
-(* Schema declaration *)
-schema_decl = "schema" , identifier , "{" , { schema_field } , "}" ;
-schema_field = identifier , type_annotation , [ null_opt_suffix ] , "," ;
-null_opt_suffix = "?" | "!" | "?!" ;
-type_annotation = ":" , type_expr ;
+(* Load and run *)
+load_and_run_stmt = "load_and_run" , module_path, [ "as", identifier ], ";" ;
+module_path = identifier, { "/", identifier } ;
 
 (* TEMPLATES: SHOULD THIS LANGUAGE EVEN HAVE THIS? *)
 template_decl = "template" , identifier , "(" , [ param_list ] , ")" , "{" , template_body , "}" ;
 template_body = string_literal | multiline_string ;
 
-(* Model declaration *)
-model_decl = "model" , identifier , [ "(" , base_model , ")" ] , "{" , { model_member } , "}" ;
-base_model = identifier ;
-model_member = tool_decl | assignment ;
-
-(* Struct declaration *)
+(* Struct declaration (no more models/schemas, only structs *)
 struct_decl = "struct" , identifier , "{" , { struct_member } , "}" ;
-struct_member = schema_field | tool_decl ;
+struct_member = struct_field | tool_decl ;
+struct_field = identifier , type_annotation , [ null_opt_suffix ] , "," ;
+null_opt_suffix = "?" | "!" | "?!" ;
+type_annotation = ":" , type_expr ;
 
 (* With statement *)
 with_stmt = "with" , expression , "{" , { statement } , "}" ;
@@ -94,14 +81,14 @@ unary_expr = [ unary_op ] , postfix_expr ;
 unary_op = "~" | "-" | "+" ;
 
 postfix_expr = primary_expr , { postfix_suffix } ;
-postfix_suffix = property_access | function_call_suffix ;
+postfix_suffix = property_access | function_call_suffix | object_init_suffix ;
 property_access = "." , identifier ;
 function_call_suffix = "(" , [ arguments ] , ")" ;
+object_init_suffix = "{" , [ field_init_list ] , "}" ;
 
-primary_expr = identifier | literal | paren_expr | object_init ;
+primary_expr = identifier | literal | paren_expr ;
 
-object_init = identifier , "{" , [ field_init_list ] , "}" ;
-field_init_list = field_init , { "," , field_init } ;
+field_init_list = field_init , { "," , field_init } , [ "," ] ;
 field_init = identifier , ":" , expression ;
 
 arguments = expression , { "," , expression } ;
@@ -120,7 +107,7 @@ if_stmt = "if" , expression , "{" , { statement } , "}" ,
           { "elif" , expression , "{" , { statement } , "}" } ,
           [ "else" , "{" , { statement } , "}" ] ;
 while_stmt = "while" , expression , "{" , { loop_body_stmt } , "}" ;
-for_stmt = "for" , "(" , [ assignment ] , ";" , [ expression ] , ";" , [ expression ] , ")" , "{" , { loop_body_stmt } , "}" ;
+for_stmt = "for" , identifier , "in" , expression , "{" , { loop_body_stmt } , "}" ;
 
 loop_body_stmt = statement | break_stmt | continue_stmt ;
 
@@ -133,8 +120,8 @@ interpolated_string = '"' , { interpolated_string_char | interpolation } , '"' ;
 interpolation = "{" , expression , "}" ;
 
 (* Lexical elements *)
-keywords = "import" | "from" | "export" | "schema" | "template" | "model" | "struct" | "tool" 
-        | "if" | "else" | "elif" | "while" | "for" | "loop" | "with" | "as" 
+keywords = "load" | "export" | "template" | "struct" | "tool"
+        | "if" | "else" | "elif" | "while" | "for" | "in" | "loop" | "with" | "as"
         | "true" | "false" | "null" ;
 identifier = ( letter | "_" ) , { letter | digit | "_" } - (keywords) ;
 heredoc_delimiter = identifier ;

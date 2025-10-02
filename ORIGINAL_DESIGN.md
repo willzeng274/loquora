@@ -3,8 +3,6 @@ https://matthijsgroen.github.io/ebnf2railroad/try-yourself.html
 # Loquora Programming Language
 
 File extension: `.loq`
-Model files: `.model.loq`
-Schema files: `.schema.loq`
 
 CLI: `loq` (pronounced "lock")
 Package manager: `loqi` (pronounced "low-key")
