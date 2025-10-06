@@ -13,7 +13,10 @@ Pkg file: `loqi.toml`
 
 # Language Syntax & Structure
 
-TLDR; Functional-inspired syntax with AI/LLM-first design, featuring context-sensitive keywords, quaternary operators, and schema-driven development.
+TLDR; Functional-inspired syntax with AI/LLM-first design, featuring context-sensitive keywords, quaternary operators.
+<!--
+schema-driven development.
+-->
 
 # Keywords
 - `template`: prompt templates (parameterized strings)
