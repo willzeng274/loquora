@@ -17,27 +17,40 @@ TLDR; Functional-inspired syntax with AI/LLM-first design, featuring context-sen
 
 # Keywords
 - `template`: prompt templates (parameterized strings)
-- `import`/`from`: importing modules or libraries
-- `export`: exporting modules or specific items
+- `load/load_and_run`: importing modules or libraries and running them
+- `export`: exporting modules, tools or other specific items
 - `with`: context management
+<!--
+only defined in the ebnf and not anywhere else for now
 - `schema`: defining schemas for validation and structured outputs
+- `model`: defining AI models with inheritance
+-->
 - `struct`: defining structures for data organization (with methods)
 - `tool`: defining functions/methods
-- `model`: defining AI models with inheritance
 - `if`, `else`, `elif`: conditional statements
 - `for`, `while`, `loop`: iteration constructs
-- `as`: for mapping responses to schemas
+- `as`: import aliases
+<!--
+this does not exist either they behave normally, since BreakOutsideLoop and ContinueOutsideLoop are runtime errors
 - `return`: returning values from functions (context-sensitive)
 - `break`, `continue`: loop control (context-sensitive)
-
 Context-sensitive keywords: `return`, `break`, `continue` are only keywords in their respective contexts (tools/loops), otherwise they're valid identifiers.
+-->
+- `return`: returning values from functions
+- `break`, `continue`: loop control
+
 
 # Special Operators & Characters
 - `//` and `/* */`: comments
+- `<<~HEREDOC`: multi-line strings (no interpolation support)
 - `.`: property access and method calls
 - `:`: type annotations
 - `->`: return type annotations
 - `|`: bitwise OR (no pipe operator in grammar yet)
+- `^`: bitwise XOR
+- `~`: bitwise NOT
+- `<<`: shift left
+- `>>`: shift right
 - `@`: lvalue operator (returns the assignable location)
 - `?`: nullable type suffix
 - `!`: required/non-optional type suffix
@@ -46,26 +59,33 @@ Context-sensitive keywords: `return`, `break`, `continue` are only keywords in t
 - `?? :: !!`: quaternary operator (condition ?? true_val :: false_val !! null_val)
 
 # String & Literal Syntax
+<!--
 - `""`: strings with `{}` interpolation support
+-->
 - `''`: character literals
-- `<<~HEREDOC`: multi-line strings (no interpolation support)
 - `.5` or `5.0`: float literals (both forms supported)
 - `_private`: identifiers can start with underscore
 
 # Syntax Examples
 
 ## Basic Syntax
+<!--
+this doesn't work at all
 ```loq
 // Import syntax - both forms supported
-from models.openai import (
+from modes.openai import (
 	"gpt-4o",
 	"gpt-3.5-turbo"
 );
 import tools.search;
 import schema.SearchField;
+-->
+```loq
+// Import syntax - load, load_and_run
+load some_library;
+load_and_run some_boiler_plate code;
 
-// Context-sensitive keywords as identifiers (outside their contexts)
-break = "this is fine at top level";
+// Context-sensitive keywords as identifiers (outside their contexts) break = "this is fine at top level";
 return = "also fine here";
 continue = "keywords only in their contexts";
 
@@ -74,30 +94,12 @@ query = "What is your problem?";
 confidence = .95;  // Float starting with decimal
 temperature = 0.7;
 _private_var = 'x';  // Character literal, underscore identifier
-
+```
+<!--
+doesn't work
 // String interpolation
 message = "Query: {query}, confidence: {confidence}";
-```
-
-## Schema Definitions
-```loq
-schema SearchResult {
-	title: str;
-	url: str;
-	some_list: vec<SearchField>;  // Nested schema
-	metadata: map<str, str>;
-	nullable_field: str?;         // Can be null
-	optional_field: str!;         // Required when present
-	optional_and_nullable: str?!; // Can be null AND optional
-};
-
-schema UserProfile {
-	name: str!;
-	email: str;
-	age: int?;
-	preferences: map<str, bool>?!;
-};
-```
+-->
 
 ## Struct with Methods
 ```loq
@@ -122,28 +124,6 @@ struct SearchEngine {
 		return true;
 	}
 };
-```
-
-## Model Definitions with Inheritance
-```loq
-model BaseModel {
-	temperature = 0.7;
-	max_tokens = 1000;
-	
-	tool generate(prompt: str) -> str {
-		return call_api(prompt);
-	}
-}
-
-model GPT4(BaseModel) {
-	model_name = "gpt-4o";
-	temperature = 0.2;  // Override base
-	
-	tool generate(prompt: str) -> str {
-		// Override with structured output support
-		return enhanced_call(prompt, model_name);
-	}
-}
 ```
 
 ## Control Flow & Operators
@@ -196,11 +176,6 @@ target @ source * multiplier;  // @ returns lvalue, ignores rvalue
 ## Context Management & Templates
 ```loq
 // Context management
-with model("gpt-4o") {
-	response1 = ask("What's the weather?");
-	response2 = ask("Tell me a joke");
-}
-
 // Template definitions
 template summarize_text(text: str, max_words: int) {
 	"Please summarize the following text in no more than {max_words} words:\n\n{text}\n\nSummary:"
@@ -243,53 +218,6 @@ user_action = authenticate(user) ??
               log_failure(user) !! 
               emergency_shutdown("Auth system down");
 ```
-
-## Context-Sensitive Keyword Abuse
-```loq
-// These are all valid identifiers at top level!
-// Lexer emits IDENTIFIER tokens because no keyword context
-break = "not a keyword here";
-continue = "also not a keyword";
-return = "perfectly fine identifier";
-
-// Assignment context - lexer sees '=' after identifier
-result = break;     // 'break' is IDENTIFIER token
-value = continue;   // 'continue' is IDENTIFIER token
-
-tool confusing_function() {
-	// Inside tool body, 'return' becomes keyword context
-	// return = 1;  // ERROR: 'return' is RETURN token here, not identifier
-	message = return;     // 'return' is IDENTIFIER here, perfectly valid
-	return message;     // 'return' is RETURN keyword token
-	// return return; // Not sure how the lexer responds to this yet
-}
-
-// Loop contexts make break/continue keywords in statement positions
-for (break = 0; break < 10; break = break + 1) {
-	// In init/condition/increment: 'break' is identifier (assignment/expression context)
-	// In loop body statements: 'break' becomes keyword
-	if break == 5 {      // 'break' still identifier in expression
-		continue;        // 'continue' is CONTINUE keyword token
-	}
-	if break == 8 {
-		break;           // 'break' is BREAK keyword token
-	}
-}
-
-while continue < 100 {   // 'continue' as identifier in condition
-	continue = continue + 1;  // Assignment to identifier
-	if continue > 50 {
-		continue;        // 'continue' is CONTINUE keyword token
-	}
-}
-
-// Lexer implementation determines context:
-// - Assignment context (sees '=') → emit IDENTIFIER
-// - Statement context in loops → emit BREAK/CONTINUE 
-// - Statement context in tools → emit RETURN
-// - Expression context → emit IDENTIFIER
-```
-
 ## @ Operator Shenanigans
 ```loq
 // @ operator returns lvalue, ignores rvalue
@@ -323,34 +251,8 @@ struct OuterStruct {
 		return inner_helper(42);
 	}
 }
-
-model RecursiveModel {
-	tool generate_with_model() {
-		model InnerModel {
-			inner_temp = 0.1;
-			
-			tool inner_generate() {
-				return "deeply nested generation";
-			}
-		}
-		
-		inner = InnerModel();
-		return inner.inner_generate();
-	}
-}
 ```
-
-## Schema Suffix Combinations
-```loq
-schema EdgeCaseSchema {
-	required_field: str!;           // Must be present
-	nullable_field: str?;           // Can be null
-	optional_nullable: str?!;       // Can be absent OR null
-	complex_nested: vec<map<str, UserProfile?>>?!;  // Madness
-}
-```
-
-## Multiline String with Interpolation
+## Multiline String
 ```loq
 user_name = "Alice";
 score = 95.5;
@@ -364,27 +266,34 @@ This is a static multiline string without interpolation.
 Use regular strings for interpolation instead.
 REPORT
 
+```
+<!---
+doesn't work
 // Use regular strings with \n for interpolated multiline content
 report = "User Report for {user_name}\n========================\n\nScore: {score}%\nStatus: {score > 90 ? \"Excellent\" : \"Good\"}\n\n{user_name} has {score > 80 ?? \"exceeded\" :: \"met\" !! \"unknown\"} expectations.";
-```
+-->
 # Language Features
 
 ## Core Features
 - **Prompt Templates**: Define reusable prompt templates with `template` keyword and parameter interpolation.
+<!---
 - **AI Models**: Define models with `model` keyword, supporting inheritance and method overriding.
 - **Schemas**: Use `schema` to define data validation schemas with nullable (`?`), optional (`!`), and combined (`?!`) modifiers.
+-->
 - **Tools/Functions**: Define functions with `tool`, supporting nested definitions, type annotations and return types.
 - **Context Management**: Use `with` for context management, similar to Python's `with` statement.
-- **Importing**: Use `import` and `from...import` to include external modules or libraries.
+- **Importing**: Use `load` and `load and run` to include external modules or libraries and also execute the code.
 - **Structs**: Use `struct` to define data structures with methods, similar to classes in other languages.
 - **Control Flow**: Use `if`, `else`, `elif`, `for`, `while`, and `loop` for control flow.
 
 ## Advanced Features
-- **Context-Sensitive Keywords**: `return`, `break`, `continue` are only keywords in their respective contexts
 - **Quaternary Operator**: `condition ?? true_val :: false_val !! null_val` for complex conditional logic
 - **@ Operator**: Returns the lvalue (assignable location), ignores rvalue in expressions
-- **Nested Declarations**: Tools, models, and other declarations can be nested within each other
+- **Nested Declarations**: Tools and other declarations can be nested within each other
+<!--
+doesn't work for now
 - **String Interpolation**: Regular strings (`"text {var}"`) support `{}` interpolation, heredoc strings are static
+-->
 - **Flexible Float Literals**: Support both `5.0` and `.5` syntax
 - **Underscore Identifiers**: Identifiers can start with underscore for private/internal naming
 
